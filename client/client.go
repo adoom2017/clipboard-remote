@@ -1,21 +1,21 @@
 package main
 
 import (
-    "context"
-    "crypto/tls"
-    "flag"
-    "net"
-    "net/http"
-    "net/url"
-    "os"
-    "os/signal"
-    "time"
+	"context"
+	"crypto/tls"
+	"flag"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"os/signal"
+	"time"
 
-    "clipboard-remote/clipboard"
-    util "clipboard-remote/common"
+	"clipboard-remote/clipboard"
+	util "clipboard-remote/common"
 
-    "github.com/gorilla/websocket"
-    log "github.com/sirupsen/logrus"
+	"github.com/gorilla/websocket"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -24,6 +24,7 @@ var (
 )
 
 func init() {
+    // Set the log output to stdout
     log.SetReportCaller(true)
     log.SetFormatter(&util.Formatter{
         HideKeys:    true,
@@ -31,9 +32,10 @@ func init() {
         NoColors:    true,
     })
 
+    // Set the log output to the specified file
     log.SetOutput(os.Stdout)
 
-    //log.SetLevel(log.WarnLevel)
+    // Set the log level
     log.SetLevel(log.InfoLevel)
 }
 
