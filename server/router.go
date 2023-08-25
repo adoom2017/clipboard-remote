@@ -35,6 +35,7 @@ func NewRouter() *Router {
     }
 }
 
+// run is the main loop of the router
 func (r *Router) run() {
     for {
         select {

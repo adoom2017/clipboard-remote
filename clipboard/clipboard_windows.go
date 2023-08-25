@@ -48,53 +48,6 @@ var (
     //lstrcpy      = kernel32.NewProc("lstrcpyW")
 )
 
-// BITMAPV5Header structure, see:
-// https://docs.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapv5header
-type bitmapV5Header struct {
-    Size          uint32
-    Width         int32
-    Height        int32
-    Planes        uint16
-    BitCount      uint16
-    Compression   uint32
-    SizeImage     uint32
-    XPelsPerMeter int32
-    YPelsPerMeter int32
-    ClrUsed       uint32
-    ClrImportant  uint32
-    RedMask       uint32
-    GreenMask     uint32
-    BlueMask      uint32
-    AlphaMask     uint32
-    CSType        uint32
-    Endpoints     struct {
-        CiexyzRed, CiexyzGreen, CiexyzBlue struct {
-            CiexyzX, CiexyzY, CiexyzZ int32 // FXPT2DOT30
-        }
-    }
-    GammaRed    uint32
-    GammaGreen  uint32
-    GammaBlue   uint32
-    Intent      uint32
-    ProfileData uint32
-    ProfileSize uint32
-    Reserved    uint32
-}
-
-type bitmapHeader struct {
-    Size          uint32
-    Width         uint32
-    Height        uint32
-    PLanes        uint16
-    BitCount      uint16
-    Compression   uint32
-    SizeImage     uint32
-    XPelsPerMeter uint32
-    YPelsPerMeter uint32
-    ClrUsed       uint32
-    ClrImportant  uint32
-}
-
 // waitOpenClipboard opens the clipboard, waiting for up to a second to do so.
 func waitOpenClipboard() error {
     started := time.Now()

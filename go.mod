@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/ebitengine/purego v0.4.0 // indirect
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20221017161538-93cebf72946b // indirect
-	github.com/hajimehoshi/ebiten/v2 v2.5.7 // indirect
+	github.com/hajimehoshi/ebiten/v2 v2.5.7
 	github.com/jezek/xgb v1.1.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	golang.org/x/exp v0.0.0-20190731235908-ec7cb31e5a56 // indirect
@@ -15,8 +15,11 @@ require (
 )
 
 require (
+	github.com/google/uuid v1.3.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/sirupsen/logrus v1.9.3
 	golang.design/x/hotkey v0.4.1
 	golang.org/x/sys v0.11.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
 )
