@@ -1,0 +1,16 @@
+listen: 443
+auths:
+  - user: "user1"
+    password: "passwd1"
+  - user: "user2"
+    password: "passwd2"   
+  - user: "user3"
+    password: "passwd3" 
+max-msg-size: 104857600
+websocket-path: "/ws"
+certificate:
+  cert-file: "./ssl.crt"
+  key-file: "./ssl.key"
+log:
+  path: "./aaa.log"
+  log-level: "info"
