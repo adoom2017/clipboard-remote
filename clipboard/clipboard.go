@@ -30,8 +30,6 @@ func Read() []byte {
 // Write returned a receive-only channel can receive an empty struct
 // as a signal, which indicates the clipboard has been overwritten from
 // this write.
-// If format t indicates an image, then the given buf assumes
-// the image data is PNG encoded.
 func Write(buf []byte) <-chan struct{} {
 	lock.Lock()
 	defer lock.Unlock()

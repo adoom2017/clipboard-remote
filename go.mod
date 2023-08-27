@@ -19,6 +19,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/sirupsen/logrus v1.9.3
 	golang.design/x/hotkey v0.4.1
+	golang.org/x/crypto v0.12.0
 	golang.org/x/sys v0.11.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1

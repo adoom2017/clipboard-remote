@@ -16,6 +16,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -62,7 +63,14 @@ func main() {
 	reqHeader := make(http.Header)
 	reqHeader.Add("ID", clientConfig.Uuid)
 	reqHeader.Add("User-Name", clientConfig.Auth.User)
-	reqHeader.Add("Token", clientConfig.Auth.Password)
+
+	hashBytes, err := bcrypt.GenerateFromPassword([]byte(clientConfig.Auth.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Errorln("Failed to hash password.")
+		return
+	}
+
+	reqHeader.Add("Token", string(hashBytes))
 
 	c, _, err := dial.Dial(u.String(), reqHeader)
 	if err != nil {
@@ -74,7 +82,7 @@ func main() {
 
 	// ping handler for keepalive
 	c.SetPingHandler(func(message string) error {
-		log.Infoln("Receive ping message from server:", c.RemoteAddr().String())
+		// log.Infoln("Receive ping message from server:", c.RemoteAddr().String())
 		err := c.WriteControl(websocket.PongMessage, []byte(message), time.Now().Add(10*time.Second))
 		if err == websocket.ErrCloseSent {
 			return nil
@@ -104,6 +112,8 @@ func main() {
 			switch clipInfo.Type {
 			case util.CLIP_TEXT:
 				log.Infof("Recv Text Message: %s", string(clipInfo.Buff))
+				<-clipboard.Write(clipInfo.Buff)
+				log.Infof("Set Text Message: %s to clipboard.", string(clipInfo.Buff))
 			case util.CLIP_PATH:
 				log.Infoln("Recv Path Message.")
 			default:
