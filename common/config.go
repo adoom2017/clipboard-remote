@@ -5,7 +5,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,7 +15,6 @@ type ClientConfig struct {
 	WebsocketPath      string     `yaml:"websocket-path"`
 	Log                LogConfig  `yaml:"log"`
 	Auth               AuthConfig `yaml:"auth"`
-	Uuid               string     `yaml:"uuid"`
 	InsecureSkipVerify bool       `yaml:"skip-cert-verify"`
 	Mode               string     `yaml:"mode"`
 }
@@ -73,10 +71,6 @@ func ClientConfigRead(configFile string) (*ClientConfig, error) {
 
 	if config.Log.LogLevel == "" {
 		config.Log.LogLevel = "info"
-	}
-
-	if config.Uuid == "" {
-		config.Uuid = uuid.New().String()
 	}
 
 	return &config, nil

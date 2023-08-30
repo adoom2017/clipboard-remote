@@ -11,6 +11,7 @@ import (
     "path/filepath"
     "reflect"
     "runtime"
+    "sync"
     "syscall"
     "time"
     "unsafe"
@@ -26,9 +27,7 @@ const (
 )
 
 var (
-    user32 = syscall.MustLoadDLL("user32")
-    //isClipboardFormatAvailable = user32.MustFindProc("IsClipboardFormatAvailable")
-    //enumClipboardFormats       = user32.MustFindProc("EnumClipboardFormats")
+    user32                     = syscall.MustLoadDLL("user32")
     getPriorityClipboardFormat = user32.MustFindProc("GetPriorityClipboardFormat")
     getClipboardSequenceNumber = user32.MustFindProc("GetClipboardSequenceNumber")
 
@@ -38,14 +37,17 @@ var (
     getClipboardData = user32.MustFindProc("GetClipboardData")
     setClipboardData = user32.MustFindProc("SetClipboardData")
 
-    kernel32    = syscall.NewLazyDLL("kernel32")
-    globalAlloc = kernel32.NewProc("GlobalAlloc")
-    globalFree  = kernel32.NewProc("GlobalFree")
-    //globalSize   = kernel32.NewProc("GlobalSize")
+    kernel32     = syscall.NewLazyDLL("kernel32")
+    globalAlloc  = kernel32.NewProc("GlobalAlloc")
+    globalFree   = kernel32.NewProc("GlobalFree")
     globalLock   = kernel32.NewProc("GlobalLock")
     globalUnlock = kernel32.NewProc("GlobalUnlock")
     moveMemory   = kernel32.NewProc("RtlMoveMemory")
-    //lstrcpy      = kernel32.NewProc("lstrcpyW")
+)
+
+var (
+    countLock      sync.Mutex
+    clipboardCount uintptr
 )
 
 // waitOpenClipboard opens the clipboard, waiting for up to a second to do so.
@@ -134,6 +136,10 @@ func write(buf []byte) (<-chan struct{}, error) {
             return
         }
 
+        // exclusive with watch
+        countLock.Lock()
+        defer countLock.Unlock()
+
         switch clipInfo.Type {
         case util.CLIP_PATH:
             err := writeFilePath(clipInfo.Name, clipInfo.Buff)
@@ -156,18 +162,21 @@ func write(buf []byte) (<-chan struct{}, error) {
         // paste the data.
         closeClipboard.Call()
 
-        cnt, _, _ := getClipboardSequenceNumber.Call()
+        //clipboardCount, _, _ = getClipboardSequenceNumber.Call()
         errch <- nil
         for {
             time.Sleep(time.Second)
             cur, _, _ := getClipboardSequenceNumber.Call()
-            if cur != cnt {
+            log.Infof("Write succeed: last count %d, new count: %d.", clipboardCount, cur)
+            if cur != clipboardCount {
                 changed <- struct{}{}
                 close(changed)
+                clipboardCount = cur
                 return
             }
         }
     }()
+
     err := <-errch
     if err != nil {
         return nil, err
@@ -392,7 +401,7 @@ func watch(ctx context.Context) <-chan []byte {
     ready := make(chan struct{})
     go func() {
         ti := time.NewTicker(time.Second)
-        cnt, _, _ := getClipboardSequenceNumber.Call()
+        clipboardCount, _, _ = getClipboardSequenceNumber.Call()
         ready <- struct{}{}
         for {
             select {
@@ -400,17 +409,21 @@ func watch(ctx context.Context) <-chan []byte {
                 close(recv)
                 return
             case <-ti.C:
+                countLock.Lock()
                 cur, _, _ := getClipboardSequenceNumber.Call()
-                if cnt != cur {
+                if clipboardCount != cur {
+                    log.Infof("Clipboard data changed, cur %d, last %d.", cur, clipboardCount)
                     b, err := read()
                     if b == nil || err != nil {
                         log.Errorln("Failed to read:", err)
-                        cnt = cur
+                        clipboardCount = cur
+                        countLock.Unlock()
                         continue
                     }
                     recv <- b
-                    cnt = cur
+                    clipboardCount = cur
                 }
+                countLock.Unlock()
             }
         }
     }()

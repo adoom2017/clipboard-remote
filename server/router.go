@@ -4,16 +4,16 @@ package main
 // clients.
 type Router struct {
     // Registered clients.
-    clients map[*Client]bool
+    clients map[*Server]bool
 
     // Inbound messages from the clients.
     broadcast chan *Message
 
     // Register requests from the clients.
-    register chan *Client
+    register chan *Server
 
     // Unregister requests from clients.
-    unregister chan *Client
+    unregister chan *Server
 }
 
 // Message info
@@ -29,9 +29,9 @@ type Message struct {
 func NewRouter() *Router {
     return &Router{
         broadcast:  make(chan *Message),
-        register:   make(chan *Client),
-        unregister: make(chan *Client),
-        clients:    make(map[*Client]bool),
+        register:   make(chan *Server),
+        unregister: make(chan *Server),
+        clients:    make(map[*Server]bool),
     }
 }
 

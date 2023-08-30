@@ -25,8 +25,8 @@ const (
     //closeGracePeriod = 10 * time.Second
 )
 
-// Client is a middleman between the websocket connection and the router.
-type Client struct {
+// Server is a middleman between the websocket connection and the router.
+type Server struct {
     router *Router
 
     // The websocket connection.
@@ -40,7 +40,7 @@ type Client struct {
 }
 
 // readMsgFromWs read messages from the websocket connection to the router.
-func (c *Client) readMsgFromWs() {
+func (c *Server) readMsgFromWs() {
     // clean func
     defer func() {
         c.router.unregister <- c
@@ -66,7 +66,7 @@ func (c *Client) readMsgFromWs() {
 }
 
 // writeMsgToWs pumps messages from the hub to the websocket connection.
-func (c *Client) writeMsgToWs() {
+func (c *Server) writeMsgToWs() {
     ticker := time.NewTicker(pingPeriod)
     defer func() {
         ticker.Stop()
@@ -118,7 +118,7 @@ func ServeWs(router *Router, w http.ResponseWriter, r *http.Request) {
 
     log.Infoln("Connect ID:", r.Header.Get("ID"))
 
-    client := &Client{router: router, conn: conn, send: make(chan []byte, 256), id: r.Header.Get("ID")}
+    client := &Server{router: router, conn: conn, send: make(chan []byte, 256), id: r.Header.Get("ID")}
     client.router.register <- client
 
     // Allow collection of memory referenced by the caller by doing all work in
