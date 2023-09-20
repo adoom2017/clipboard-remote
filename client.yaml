@@ -1,6 +1,6 @@
 server: 127.0.0.1
 port: 443
-websocket-path: "/"
+websocket-path: "/websocket"
 log:
   path:
   log-level: info

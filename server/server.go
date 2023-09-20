@@ -2,6 +2,8 @@ package main
 
 import (
     "flag"
+    "fmt"
+    "html"
     "net/http"
     "os"
 
@@ -37,6 +39,10 @@ func init() {
     log.SetLevel(log.InfoLevel)
 }
 
+func fooHandler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, "hello,%q", html.EscapeString(r.URL.Path))
+}
+
 func main() {
     // Parse command line arguments
     flag.Parse()
@@ -46,10 +52,12 @@ func main() {
     go router.run()
 
     // Handle requests
-    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+    http.HandleFunc("/websocket", func(w http.ResponseWriter, r *http.Request) {
         // Serve the websocket connection
         ServeWs(router, w, r)
     })
+
+    http.HandleFunc("/hello", fooHandler)
 
     // Listen and serve HTTPS
     err := http.ListenAndServeTLS(*addr, "../certificate/ssl.crt", "../certificate/ssl.key", nil)

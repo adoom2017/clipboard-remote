@@ -47,12 +47,10 @@ func main() {
 
 	// watch context, used for watch break
 	ctx, cancel := context.WithCancel(context.Background())
-	//go func() {
-	//}()
 
 	// handle io local to server
 	client := NewClient(clientConfig)
-	client.handleIO(ctx, clipboard.Watch(ctx))
+	go client.handleIO(ctx, clipboard.Watch(ctx))
 
 	<-interrupt
 	cancel()

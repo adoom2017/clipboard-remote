@@ -119,6 +119,9 @@ func ServeWs(router *Router, w http.ResponseWriter, r *http.Request) {
     log.Infoln("Connect ID:", r.Header.Get("ID"))
 
     client := &Server{router: router, conn: conn, send: make(chan []byte, 256), id: r.Header.Get("ID")}
+
+    // TODO: 用户鉴权
+
     client.router.register <- client
 
     // Allow collection of memory referenced by the caller by doing all work in

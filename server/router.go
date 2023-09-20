@@ -1,5 +1,9 @@
 package main
 
+import (
+    util "clipboard-remote/common"
+)
+
 // Router maintains the set of active clients and broadcasts messages to the
 // clients.
 type Router struct {
@@ -41,6 +45,14 @@ func (r *Router) run() {
         select {
         case client := <-r.register:
             r.clients[client] = true
+            // TODO: 响应客户端
+            wsm := &util.WebsocketMessage{
+                Action: util.ActionHandshakeReady,
+                UserID: client.id,
+                Data:   nil,
+            }
+            client.send <- wsm.Encode()
+
         case client := <-r.unregister:
             if _, ok := r.clients[client]; ok {
                 delete(r.clients, client)
