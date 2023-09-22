@@ -3,6 +3,7 @@ package common
 import (
     "bytes"
     "encoding/gob"
+    "os"
 )
 
 type ClipType int
@@ -39,4 +40,12 @@ func DecodeToStruct(buf []byte) (ClipBoardBuff, error) {
         return p, err
     }
     return p, nil
+}
+
+func Exists(path string) bool {
+    _, err := os.Stat(path)
+    if os.IsNotExist(err) {
+        return false
+    }
+    return true
 }

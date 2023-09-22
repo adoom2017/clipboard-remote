@@ -6,6 +6,7 @@ import (
     "html"
     "net/http"
     "os"
+    "path"
 
     util "clipboard-remote/common"
 
@@ -14,12 +15,16 @@ import (
 )
 
 var (
-    addr     = flag.String("addr", "0.0.0.0:443", "https service address")
+    configDir  = flag.String("d", "config", "server config directory")
+    configFile = flag.String("f", "server.yaml", "server config filename")
+
     upgrader = websocket.Upgrader{
         ReadBufferSize:    4096,
         WriteBufferSize:   4096,
         EnableCompression: true,
     }
+
+    DB *util.DBInfo
 )
 
 func init() {
@@ -46,6 +51,42 @@ func fooHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
     // Parse command line arguments
     flag.Parse()
+
+    configPath := path.Join(*configDir, *configFile)
+    serverConfig, err := util.ServerConfigRead(configPath)
+    if err != nil {
+        log.Errorf("Failed to load server config file(%s), err: %v.", configPath, err)
+        return
+    }
+
+    // Init sqlite database
+    dbFilePath := path.Join(*configDir, "server.sqlite3")
+    if util.Exists(dbFilePath) {
+        DB = util.InitDB(dbFilePath)
+    } else {
+        DB = util.InitDB(dbFilePath)
+        err = DB.CreateUserInfoTable()
+        if err != nil {
+            log.Errorln("Failed to create user info table:", err)
+            DB.Close()
+            return
+        }
+
+        DB.CreateContentInfoTable()
+        if err != nil {
+            log.Errorln("Failed to create content info table:", err)
+            DB.Close()
+            return
+        }
+    }
+    defer DB.Close()
+
+    err = DB.InsertUserInfo(serverConfig.Auths)
+    if err != nil {
+        log.Errorln("Failed to add user info to database:", err)
+        return
+    }
+
     // Create a new router
     router := NewRouter()
     // Run the router
@@ -60,7 +101,7 @@ func main() {
     http.HandleFunc("/hello", fooHandler)
 
     // Listen and serve HTTPS
-    err := http.ListenAndServeTLS(*addr, "../certificate/ssl.crt", "../certificate/ssl.key", nil)
+    err = http.ListenAndServeTLS(serverConfig.Address, serverConfig.Certificate.CertFile, serverConfig.Certificate.KeyFile, nil)
     if err != nil {
         log.Fatal("ListenAndServe: ", err)
     }

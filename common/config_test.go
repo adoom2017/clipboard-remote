@@ -52,7 +52,7 @@ func TestServerConfigRead(t *testing.T) {
 			{User: "user3", Password: "password3"},
 		},
 		MaxMsgSize:    1024,
-		ListenPort:    443,
+		Address:       "0.0.0.0:443",
 		WebsocketPath: "/ws",
 		Certificate: CertConfig{
 			CertFile: "ssl.crt",

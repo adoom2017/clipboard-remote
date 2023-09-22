@@ -1,11 +1,16 @@
 package main
 
 import (
+    "encoding/base64"
     "net/http"
+    "strings"
     "time"
 
     "github.com/gorilla/websocket"
     log "github.com/sirupsen/logrus"
+    "golang.org/x/crypto/bcrypt"
+
+    util "clipboard-remote/common"
 )
 
 const (
@@ -37,6 +42,9 @@ type Server struct {
 
     // client identify
     id string
+
+    // username
+    username string
 }
 
 // readMsgFromWs read messages from the websocket connection to the router.
@@ -116,12 +124,22 @@ func ServeWs(router *Router, w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    log.Infoln("Connect ID:", r.Header.Get("ID"))
+    token, err := base64.StdEncoding.DecodeString(r.Header.Get("Authorization"))
+    if err != nil {
+        log.Errorln("Failed to decode token:", token, err)
+        return
+    }
 
-    client := &Server{router: router, conn: conn, send: make(chan []byte, 256), id: r.Header.Get("ID")}
+    tokens := strings.Split(util.BytesToString(token), ":")
+    pass := DB.GetPassword(tokens[0])
 
-    // TODO: 用户鉴权
+    err = bcrypt.CompareHashAndPassword(util.StringToBytes((tokens[1])), util.StringToBytes(pass))
+    if err != nil {
+        log.Errorf("Failed to auth user(%s), error: %v.", tokens[0], err)
+        return
+    }
 
+    client := &Server{router: router, conn: conn, send: make(chan []byte, 256), id: r.Header.Get("ID"), username: tokens[0]}
     client.router.register <- client
 
     // Allow collection of memory referenced by the caller by doing all work in

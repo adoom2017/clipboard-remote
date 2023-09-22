@@ -23,7 +23,7 @@ type ClientConfig struct {
 type ServerConfig struct {
 	Auths         []AuthConfig `yaml:"auths"`
 	MaxMsgSize    int          `yaml:"max-msg-size"`
-	ListenPort    int          `yaml:"listen"`
+	Address       string       `yaml:"addr"`
 	WebsocketPath string       `yaml:"websocket-path"`
 	Certificate   CertConfig   `yaml:"certificate"`
 	Log           LogConfig    `yaml:"log"`

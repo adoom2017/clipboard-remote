@@ -5,8 +5,8 @@ log:
   path:
   log-level: info
 auth:
-  user: user-test
-  password: 123456
+  user: user1
+  password: passwd1
 skip-cert-verify: true
 
 # auto: 自动获取剪贴板内容，并且上传到服务器，服务器也会自动下发内容到该客户端

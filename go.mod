@@ -17,6 +17,7 @@ require (
 require (
 	github.com/google/uuid v1.3.1
 	github.com/gorilla/websocket v1.5.0
+	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/sirupsen/logrus v1.9.3
 	golang.design/x/hotkey v0.4.1
 	golang.org/x/crypto v0.12.0
