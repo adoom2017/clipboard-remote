@@ -1,20 +1,13 @@
 package main
 
-import (
-    util "clipboard-remote/common"
-)
-
 // Router maintains the set of active clients and broadcasts messages to the
 // clients.
 type Router struct {
     // Registered clients.
-    clients map[*Server]bool
+    clients map[*Server]string
 
     // Inbound messages from the clients.
     broadcast chan *Message
-
-    // Register requests from the clients.
-    register chan *Server
 
     // Unregister requests from clients.
     unregister chan *Server
@@ -25,6 +18,9 @@ type Message struct {
     // Message Send Client ID
     id string
 
+    // Message from user
+    username string
+
     // message content
     content []byte
 }
@@ -33,9 +29,8 @@ type Message struct {
 func NewRouter() *Router {
     return &Router{
         broadcast:  make(chan *Message),
-        register:   make(chan *Server),
         unregister: make(chan *Server),
-        clients:    make(map[*Server]bool),
+        clients:    make(map[*Server]string),
     }
 }
 
@@ -43,16 +38,6 @@ func NewRouter() *Router {
 func (r *Router) run() {
     for {
         select {
-        case client := <-r.register:
-            r.clients[client] = true
-            // TODO: 响应客户端
-            wsm := &util.WebsocketMessage{
-                Action: util.ActionHandshakeReady,
-                UserID: client.id,
-                Data:   nil,
-            }
-            client.send <- wsm.Encode()
-
         case client := <-r.unregister:
             if _, ok := r.clients[client]; ok {
                 delete(r.clients, client)
@@ -60,7 +45,7 @@ func (r *Router) run() {
             }
         case message := <-r.broadcast:
             for client := range r.clients {
-                if message.id == client.id {
+                if message.id == client.id || message.username != client.username {
                     continue
                 }
 

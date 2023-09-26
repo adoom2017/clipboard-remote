@@ -18,6 +18,7 @@ type DBInfo struct {
     conn   *sql.DB
 }
 
+//InitDB init sqlite database with specify file
 func InitDB(dbFile string) *DBInfo {
     conn, err := sql.Open("sqlite3", dbFile)
     if err != nil {
@@ -30,6 +31,7 @@ func InitDB(dbFile string) *DBInfo {
     }
 }
 
+//Close close the sqlite database
 func (db *DBInfo) Close() {
     if db.conn != nil {
         db.conn.Close()
@@ -135,7 +137,7 @@ func (db *DBInfo) CreateContentInfoTable() error {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         clientid VARCHAR(64) NOT NULL,
         username VARCHAR(64) NOT NULL,
-        content VARCHAR(2048) NOT NULL,
+        content VARCHAR(64) NOT NULL,
         timestamp DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'now', 'localtime')),
         UNIQUE (clientid, username)
     );

@@ -1,6 +1,7 @@
 package main
 
 import (
+    util "clipboard-remote/common"
     "encoding/base64"
     "net/http"
     "strings"
@@ -9,8 +10,6 @@ import (
     "github.com/gorilla/websocket"
     log "github.com/sirupsen/logrus"
     "golang.org/x/crypto/bcrypt"
-
-    util "clipboard-remote/common"
 )
 
 const (
@@ -43,7 +42,7 @@ type Server struct {
     // client identify
     id string
 
-    // username
+    // message username
     username string
 }
 
@@ -61,7 +60,7 @@ func (c *Server) readMsgFromWs() {
     c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
     for {
-        _, content, err := c.conn.ReadMessage()
+        _, msg, err := c.conn.ReadMessage()
         if err != nil {
             if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
                 log.Errorf("error: %v", err)
@@ -69,7 +68,52 @@ func (c *Server) readMsgFromWs() {
             break
         }
 
-        c.router.broadcast <- &Message{id: c.id, content: content}
+        // handle the client message
+        wsm := &util.WebsocketMessage{}
+        err = wsm.Decode(msg)
+        if err != nil {
+            log.Errorf("Error messaage: %v", err)
+            continue
+        }
+
+        switch wsm.Action {
+        case util.ActionHandshakeRegister:
+            user, ok := auth(wsm.Data)
+            if !ok {
+                log.Errorln("Failed to auth user:", user)
+                close(c.send)
+                return
+            } else {
+                c.router.clients[c] = user
+                wsm := &util.WebsocketMessage{
+                    Action: util.ActionHandshakeReady,
+                    UserID: wsm.UserID,
+                    Data:   nil,
+                }
+                c.send <- wsm.Encode()
+
+                c.id = wsm.UserID
+                c.username = user
+
+                log.Infof("User: %s login succeed.", user)
+            }
+        case util.ActionClipboardChanged:
+            // broadcast clip content to user's all client
+            DB.InsertClipContent(&util.ClipContentInfo{ClientID: c.id, Username: c.username, Content: base64.StdEncoding.EncodeToString(wsm.Data)})
+            c.router.broadcast <- &Message{id: c.id, username: c.username, content: wsm.Data}
+
+            content := DB.GetClipContentByID(c.id)
+            temp, _ := base64.StdEncoding.DecodeString(content)
+
+            aaa, _ := util.DecodeToStruct(temp)
+            log.Infof("Type: %d, Name: %s, Buff: %s.", aaa.Type, aaa.Name, string(aaa.Buff))
+
+        default:
+            // close the connection if handshake is not ready
+            c.conn.Close()
+            return
+        }
+
     }
 }
 
@@ -116,6 +160,24 @@ func (c *Server) writeMsgToWs() {
     }
 }
 
+func auth(token []byte) (string, bool) {
+    tokens := strings.Split(util.BytesToString(token), ":")
+    if len(tokens) != 2 {
+        log.Errorln("Invalid token:", token)
+        return "", false
+    }
+    user := tokens[0]
+    pass := DB.GetPassword(user)
+
+    err := bcrypt.CompareHashAndPassword(util.StringToBytes((tokens[1])), util.StringToBytes(pass))
+    if err != nil {
+        log.Errorf("Failed to auth user(%s), error: %v.", user, err)
+        return user, false
+    }
+
+    return user, true
+}
+
 // ServeWs handles websocket requests from the peer.
 func ServeWs(router *Router, w http.ResponseWriter, r *http.Request) {
     conn, err := upgrader.Upgrade(w, r, nil)
@@ -124,23 +186,11 @@ func ServeWs(router *Router, w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    token, err := base64.StdEncoding.DecodeString(r.Header.Get("Authorization"))
-    if err != nil {
-        log.Errorln("Failed to decode token:", token, err)
-        return
+    client := &Server{
+        router: router,
+        conn:   conn,
+        send:   make(chan []byte, 256),
     }
-
-    tokens := strings.Split(util.BytesToString(token), ":")
-    pass := DB.GetPassword(tokens[0])
-
-    err = bcrypt.CompareHashAndPassword(util.StringToBytes((tokens[1])), util.StringToBytes(pass))
-    if err != nil {
-        log.Errorf("Failed to auth user(%s), error: %v.", tokens[0], err)
-        return
-    }
-
-    client := &Server{router: router, conn: conn, send: make(chan []byte, 256), id: r.Header.Get("ID"), username: tokens[0]}
-    client.router.register <- client
 
     // Allow collection of memory referenced by the caller by doing all work in
     // new goroutines.

@@ -30,10 +30,9 @@ type WebsocketAction string
 
 // WebsocketMessage represents a message for websocket.
 type WebsocketMessage struct {
-    Action  WebsocketAction `json:"action"`
-    UserID  string          `json:"user_id"`
-    Message string          `json:"msg"`
-    Data    []byte          `json:"data"`
+    Action WebsocketAction `json:"action"`
+    UserID string          `json:"user_id"`
+    Data   []byte          `json:"data"`
 }
 
 // Encode encodes a websocket message

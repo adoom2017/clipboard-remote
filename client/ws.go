@@ -3,12 +3,9 @@ package main
 import (
     "context"
     "crypto/tls"
-    "encoding/base64"
     "fmt"
-    "net/http"
     "net/url"
     "os"
-    "strings"
     "sync"
     "time"
 
@@ -58,32 +55,25 @@ func (c *Client) connect() error {
     }}
 
     u := url.URL{Scheme: "wss", Host: c.client.Host, Path: c.client.WebsocketPath}
+    conn, _, err := dial.Dial(u.String(), nil)
+    if err != nil {
+        return fmt.Errorf("failed to dial(%s): %w", u.String(), err)
+    }
+    c.conn = conn
 
+    // hash password
     hashBytes, err := bcrypt.GenerateFromPassword([]byte(c.client.Auth.Password), bcrypt.DefaultCost)
     if err != nil {
         return fmt.Errorf("failed to hash password: %w", err)
     }
 
-    creds := c.client.Auth.User + ":" + util.BytesToString(hashBytes)
-    token := base64.StdEncoding.EncodeToString(util.StringToBytes(creds))
-
-    reqHeader := make(http.Header)
-    reqHeader.Add("ID", c.ID)
-    reqHeader.Add("Authorization", token)
-
-    c.conn, _, err = dial.Dial(u.String(), reqHeader)
-    if err != nil {
-        return fmt.Errorf("failed to dial(%s): %w", u.String(), err)
-    }
-
-    log.Infof("Succeed connecting to %s, ID: %s.", u.String(), c.ID)
-
     // handshake with server
     c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+    creds := c.client.Auth.User + ":" + util.BytesToString(hashBytes)
     err = c.conn.WriteMessage(websocket.BinaryMessage, (&util.WebsocketMessage{
         Action: util.ActionHandshakeRegister,
         UserID: c.ID,
-        Data:   nil,
+        Data:   util.StringToBytes(creds),
     }).Encode())
 
     if err != nil {
@@ -104,10 +94,7 @@ func (c *Client) connect() error {
 
     switch wsm.Action {
     case util.ActionHandshakeReady:
-        if wsm.UserID != c.ID {
-            c.ID = wsm.UserID
-            log.Infoln("conflict hostname, updated daemon id: ", c.ID)
-        }
+        log.Infoln("Hand shake succeed:", c.ID)
     default:
         // close the connection if handshake is not ready
         c.conn.Close()
@@ -143,7 +130,7 @@ func (c *Client) handleIO(ctx context.Context, clipData <-chan []byte) {
         c.reconnect(ctx)
     }
 
-    log.Infoln("Client id:", c.ID)
+    log.Debugln("Client id:", c.ID)
     go c.watchClipboard(ctx, clipData)
     go c.readFromServer(ctx)
     go c.writeToServer(ctx)
@@ -160,27 +147,22 @@ func (c *Client) readFromServer(ctx context.Context) {
             c.conn.SetReadDeadline(time.Time{})
             _, msg, err := c.conn.ReadMessage()
             if err != nil {
-                if strings.Contains(err.Error(), "timeout") {
-                    // timeout
-                    log.Infof("Timeout: %v", err)
-                    continue
-                } else {
-                    log.Errorf("Failed to read message from server: %v", err)
+                log.Errorf("Failed to read message from server: %v", err)
 
-                    c.Lock()
-                    c.conn = nil
-                    c.Unlock()
+                c.Lock()
+                c.conn.Close()
+                c.conn = nil
+                c.Unlock()
 
-                    // block until connection is ready again
-                    c.reconnect(ctx)
-                    continue
-                }
+                // block until connection is ready again
+                c.reconnect(ctx)
+                continue
             }
 
             wsm := &util.WebsocketMessage{}
             err = wsm.Decode(msg)
             if err != nil {
-                log.Printf("failed to read message: %v", err)
+                log.Errorf("failed to read message: %v", err)
                 continue
             }
 
@@ -216,6 +198,7 @@ func (c *Client) writeToServer(ctx context.Context) {
                 continue
             }
 
+            c.conn.SetWriteDeadline(time.Time{})
             err := c.conn.WriteMessage(websocket.BinaryMessage, msg.Encode())
             if err != nil {
                 log.Errorf("failed to write message to server: %v", err)
@@ -244,6 +227,8 @@ func (c *Client) watchClipboard(ctx context.Context, clipData <-chan []byte) {
                 log.Errorln("Clipboard data channel has been closed.")
                 continue
             }
+
+            log.Infoln("Get clipboard data:", string(data))
 
             c.writeCh <- &util.WebsocketMessage{
                 Action: util.ActionClipboardChanged,
