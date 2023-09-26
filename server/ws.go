@@ -99,15 +99,12 @@ func (c *Server) readMsgFromWs() {
             }
         case util.ActionClipboardChanged:
             // broadcast clip content to user's all client
-            DB.InsertClipContent(&util.ClipContentInfo{ClientID: c.id, Username: c.username, Content: base64.StdEncoding.EncodeToString(wsm.Data)})
+            err := DB.InsertClipContent(&util.ClipContentInfo{ClientID: c.id, Username: c.username, Content: base64.StdEncoding.EncodeToString(wsm.Data)})
+            if err != nil {
+                log.Errorf("Failed to insert clipcontent to database, id: %s, user: %s.", c.id, c.username)
+            }
+
             c.router.broadcast <- &Message{id: c.id, username: c.username, content: wsm.Data}
-
-            content := DB.GetClipContentByID(c.id)
-            temp, _ := base64.StdEncoding.DecodeString(content)
-
-            aaa, _ := util.DecodeToStruct(temp)
-            log.Infof("Type: %d, Name: %s, Buff: %s.", aaa.Type, aaa.Name, string(aaa.Buff))
-
         default:
             // close the connection if handshake is not ready
             c.conn.Close()
