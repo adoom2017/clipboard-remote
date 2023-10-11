@@ -7,7 +7,7 @@ import (
 	"os/signal"
 
 	"clipboard-remote/clipboard"
-	util "clipboard-remote/common"
+	"clipboard-remote/utils"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,7 +19,7 @@ var (
 func init() {
 	// Set the log output to stdout
 	log.SetReportCaller(true)
-	log.SetFormatter(&util.Formatter{
+	log.SetFormatter(&utils.Formatter{
 		HideKeys:    true,
 		CallerFirst: true,
 		NoColors:    true,
@@ -35,7 +35,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	clientConfig, err := util.ClientConfigRead(*configPath)
+	clientConfig, err := utils.ClientConfigRead(*configPath)
 	if err != nil {
 		log.Errorf("Failed to load client config file(%s), err: %v.", *configPath, err)
 		return

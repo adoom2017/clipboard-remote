@@ -1,8 +1,8 @@
-package common
+package utils
 
 import (
-    "reflect"
-    "unsafe"
+	"reflect"
+	"unsafe"
 )
 
 // StringToBytes 将string转换成byte slice, 无内存拷贝

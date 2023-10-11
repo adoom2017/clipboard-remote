@@ -1,8 +1,8 @@
-package common
+package utils
 
 import (
-    "os"
-    "testing"
+	"os"
+	"testing"
 )
 
 func TestUserDB(t *testing.T) {

@@ -1,61 +1,85 @@
 package main
 
+import (
+  "container/list"
+)
+
 // Router maintains the set of active clients and broadcasts messages to the
 // clients.
 type Router struct {
-    // Registered clients.
-    clients map[*Server]string
+  // Registered clients.
+  clients map[string]*list.List
 
-    // Inbound messages from the clients.
-    broadcast chan *Message
+  // Message from the client, need broadcast to others.
+  broadcast chan *Message
 
-    // Unregister requests from clients.
-    unregister chan *Server
+  // Unregister request from client.
+  unregister chan *Client
+
+  // Register request from client
+  register chan *Client
 }
 
 // Message info
 type Message struct {
-    // Message Send Client ID
-    id string
+  // Message sender's client ID
+  id string
 
-    // Message from user
-    username string
+  // Message sender's client username
+  username string
 
-    // message content
-    content []byte
+  // message content
+  content []byte
 }
 
 // NewRouter return router instance
 func NewRouter() *Router {
-    return &Router{
-        broadcast:  make(chan *Message),
-        unregister: make(chan *Server),
-        clients:    make(map[*Server]string),
-    }
+  return &Router{
+    broadcast:  make(chan *Message),
+    unregister: make(chan *Client),
+    register:   make(chan *Client),
+    clients:    make(map[string]*list.List),
+  }
 }
 
 // run is the main loop of the router
 func (r *Router) run() {
-    for {
-        select {
-        case client := <-r.unregister:
-            if _, ok := r.clients[client]; ok {
-                delete(r.clients, client)
-                close(client.send)
-            }
-        case message := <-r.broadcast:
-            for client := range r.clients {
-                if message.id == client.id || message.username != client.username {
-                    continue
-                }
+  for {
+    select {
+    // register client
+    case client := <-r.register:
+      if tmpList, ok := r.clients[client.username]; ok {
+        tmpList.PushBack(client)
+      } else {
+        tmpList = list.New()
+        tmpList.PushBack(client)
+        r.clients[client.username] = tmpList
+      }
+    // unregister client
+    case client := <-r.unregister:
+      if tmpList, ok := r.clients[client.username]; ok {
+        for i := tmpList.Front(); i != nil; i = i.Next() {
+          if tmp := i.Value.(*Client); tmp.id == client.id {
+            tmpList.Remove(i)
 
-                select {
-                case client.send <- message.content:
-                default:
-                    close(client.send)
-                    delete(r.clients, client)
-                }
-            }
+            // close client send buffer
+            close(tmp.send)
+            break
+          }
         }
+      }
+    // broadcast client message
+    case message := <-r.broadcast:
+      if tmpList, ok := r.clients[message.username]; ok {
+        for i := tmpList.Front(); i != nil; i = i.Next() {
+          if tmp := i.Value.(*Client); message.id == tmp.id {
+            continue
+          } else {
+            // add content to other client send buffer
+            tmp.send <- message.content
+          }
+        }
+      }
     }
+  }
 }

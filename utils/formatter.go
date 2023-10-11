@@ -1,15 +1,15 @@
-package common
+package utils
 
 import (
-    "bytes"
-    "fmt"
-    "path/filepath"
-    "runtime"
-    "sort"
-    "strings"
-    "time"
+	"bytes"
+	"fmt"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
+	"time"
 
-    "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Formatter - logrus formatter, implements logrus.Formatter

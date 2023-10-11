@@ -1,9 +1,9 @@
-package common
+package utils
 
 import (
-    "bytes"
-    "encoding/gob"
-    "os"
+	"bytes"
+	"encoding/gob"
+	"os"
 )
 
 type ClipType int

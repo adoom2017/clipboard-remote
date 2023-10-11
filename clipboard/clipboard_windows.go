@@ -4,7 +4,7 @@
 package clipboard
 
 import (
-    util "clipboard-remote/common"
+    "clipboard-remote/utils"
     "context"
     "fmt"
     "os"
@@ -129,7 +129,7 @@ func write(buf []byte) (<-chan struct{}, error) {
             return
         }
 
-        clipInfo, err := util.DecodeToStruct(buf)
+        clipInfo, err := utils.DecodeToStruct(buf)
         if err != nil {
             log.Errorln("Failed to decode struct:", err)
             closeClipboard.Call()
@@ -141,14 +141,14 @@ func write(buf []byte) (<-chan struct{}, error) {
         defer countLock.Unlock()
 
         switch clipInfo.Type {
-        case util.CLIP_PATH:
+        case utils.CLIP_PATH:
             err := writeFilePath(clipInfo.Name, clipInfo.Buff)
             if err != nil {
                 errch <- err
                 closeClipboard.Call()
                 return
             }
-        case util.CLIP_TEXT:
+        case utils.CLIP_TEXT:
             fallthrough
         default:
             err := writeText(clipInfo.Buff)
@@ -200,13 +200,13 @@ func readText() ([]byte, error) {
 
     _, content := convertBufToStr(p)
 
-    buff := util.ClipBoardBuff{
-        Type: util.CLIP_TEXT,
+    buff := utils.ClipBoardBuff{
+        Type: utils.CLIP_TEXT,
         Name: "",
-        Buff: util.StringToBytes(content),
+        Buff: utils.StringToBytes(content),
     }
 
-    return util.EncodeToBytes(buff)
+    return utils.EncodeToBytes(buff)
 }
 
 // writeText writes given data to the clipboard. It is the caller's
@@ -264,13 +264,13 @@ func fileRead(filePath string) ([]byte, error) {
         return nil, err
     }
 
-    buff := util.ClipBoardBuff{
-        Type: util.CLIP_PATH,
+    buff := utils.ClipBoardBuff{
+        Type: utils.CLIP_PATH,
         Name: filepath.Base(filePath),
         Buff: buffer,
     }
 
-    return util.EncodeToBytes(buff)
+    return utils.EncodeToBytes(buff)
 }
 
 func isDirExist(path string) bool {

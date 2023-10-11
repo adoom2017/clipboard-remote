@@ -15,23 +15,23 @@ import (
     "golang.org/x/crypto/bcrypt"
 
     "clipboard-remote/clipboard"
-    util "clipboard-remote/common"
+    "clipboard-remote/utils"
 )
 
 type Client struct {
     sync.Mutex
 
-    client *util.ClientConfig
+    client *utils.ClientConfig
     ID     string
     conn   *websocket.Conn
 
     // {string: chan *types.WebsocketMessage}
     readChs sync.Map
-    writeCh chan *util.WebsocketMessage
+    writeCh chan *utils.WebsocketMessage
 }
 
 // NewClient creates a new ws client
-func NewClient(c *util.ClientConfig) *Client {
+func NewClient(c *utils.ClientConfig) *Client {
     id, err := os.Hostname()
     if err != nil {
         id = uuid.NewString()
@@ -41,7 +41,7 @@ func NewClient(c *util.ClientConfig) *Client {
     }
     return &Client{
         ID:      id,
-        writeCh: make(chan *util.WebsocketMessage, 10),
+        writeCh: make(chan *utils.WebsocketMessage, 10),
         client:  c,
     }
 }
@@ -69,11 +69,11 @@ func (c *Client) connect() error {
 
     // handshake with server
     c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-    creds := c.client.Auth.User + ":" + util.BytesToString(hashBytes)
-    err = c.conn.WriteMessage(websocket.BinaryMessage, (&util.WebsocketMessage{
-        Action: util.ActionHandshakeRegister,
+    creds := c.client.Auth.User + ":" + utils.BytesToString(hashBytes)
+    err = c.conn.WriteMessage(websocket.BinaryMessage, (&utils.WebsocketMessage{
+        Action: utils.ActionHandshakeRegister,
         UserID: c.ID,
-        Data:   util.StringToBytes(creds),
+        Data:   utils.StringToBytes(creds),
     }).Encode())
 
     if err != nil {
@@ -86,14 +86,14 @@ func (c *Client) connect() error {
         return fmt.Errorf("failed to read message for handshake: %w", err)
     }
 
-    wsm := &util.WebsocketMessage{}
+    wsm := &utils.WebsocketMessage{}
     err = wsm.Decode(msg)
     if err != nil {
         return fmt.Errorf("failed to handshake with server: %w", err)
     }
 
     switch wsm.Action {
-    case util.ActionHandshakeReady:
+    case utils.ActionHandshakeReady:
         log.Infoln("Hand shake succeed:", c.ID)
     default:
         // close the connection if handshake is not ready
@@ -138,7 +138,6 @@ func (c *Client) handleIO(ctx context.Context, clipData <-chan []byte) {
 
 func (c *Client) readFromServer(ctx context.Context) {
     for {
-        log.Infoln("Begin read message from server.")
         select {
         case <-ctx.Done():
             log.Infoln("Exit read routine.")
@@ -159,7 +158,7 @@ func (c *Client) readFromServer(ctx context.Context) {
                 continue
             }
 
-            wsm := &util.WebsocketMessage{}
+            wsm := &utils.WebsocketMessage{}
             err = wsm.Decode(msg)
             if err != nil {
                 log.Errorf("failed to read message: %v", err)
@@ -168,13 +167,13 @@ func (c *Client) readFromServer(ctx context.Context) {
 
             // duplicate messages to all readers, readers should not edit the message
             c.readChs.Range(func(k, v interface{}) bool {
-                readerCh := v.(chan *util.WebsocketMessage)
+                readerCh := v.(chan *utils.WebsocketMessage)
                 readerCh <- wsm
                 return true
             })
 
             switch wsm.Action {
-            case util.ActionClipboardChanged:
+            case utils.ActionClipboardChanged:
                 log.Infof("Clipboard data has changed from %s, sync with local...", wsm.UserID)
                 clipboard.Write(wsm.Data)
                 log.Infof("Clipboard data has changed from %s, sync succeed.", wsm.UserID)
@@ -230,8 +229,8 @@ func (c *Client) watchClipboard(ctx context.Context, clipData <-chan []byte) {
 
             log.Infoln("Get clipboard data:", string(data))
 
-            c.writeCh <- &util.WebsocketMessage{
-                Action: util.ActionClipboardChanged,
+            c.writeCh <- &utils.WebsocketMessage{
+                Action: utils.ActionClipboardChanged,
                 UserID: c.ID,
                 Data:   data,
             }
@@ -240,8 +239,8 @@ func (c *Client) watchClipboard(ctx context.Context, clipData <-chan []byte) {
 }
 
 func (c *Client) close() {
-    _ = c.conn.WriteMessage(websocket.BinaryMessage, (&util.WebsocketMessage{
-        Action: util.ActionTerminate,
+    _ = c.conn.WriteMessage(websocket.BinaryMessage, (&utils.WebsocketMessage{
+        Action: utils.ActionTerminate,
         UserID: c.ID,
     }).Encode())
 

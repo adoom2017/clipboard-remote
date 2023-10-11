@@ -1,14 +1,16 @@
 package main
 
 import (
+    "clipboard-remote/utils"
+    "context"
+    "encoding/base64"
     "flag"
-    "fmt"
-    "html"
     "net/http"
     "os"
+    "os/signal"
     "path"
-
-    util "clipboard-remote/common"
+    "syscall"
+    "time"
 
     "github.com/gorilla/websocket"
     log "github.com/sirupsen/logrus"
@@ -24,14 +26,14 @@ var (
         EnableCompression: true,
     }
 
-    DB *util.DBInfo
+    DB *utils.DBInfo
 )
 
 func init() {
     // Set the report callers to true
     log.SetReportCaller(true)
     // Set the formatter to include the function name and line number
-    log.SetFormatter(&util.Formatter{
+    log.SetFormatter(&utils.Formatter{
         HideKeys:    true,
         CallerFirst: true,
         NoColors:    true,
@@ -44,8 +46,28 @@ func init() {
     log.SetLevel(log.InfoLevel)
 }
 
-func fooHandler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "hello,%q", html.EscapeString(r.URL.Path))
+func getClipboardHandler(w http.ResponseWriter, r *http.Request) {
+    user := r.URL.Query().Get("username")
+    buff, err := base64.StdEncoding.DecodeString(DB.GetClipContentByName(user))
+    if err != nil {
+        log.Errorln("Failed to get clipboard content for user:", user, err)
+        w.Write([]byte("Get clipboard info failed."))
+        return
+    }
+
+    content, err := utils.DecodeToStruct(buff)
+    if err != nil {
+        log.Errorln("Failed to get clipboard content for user:", user, err)
+        w.Write([]byte("Get clipboard info failed."))
+        return
+    }
+
+    if content.Type != utils.CLIP_TEXT {
+        w.Write([]byte("Unsupported content type."))
+        return
+    }
+
+    w.Write(content.Buff)
 }
 
 func main() {
@@ -53,7 +75,7 @@ func main() {
     flag.Parse()
 
     configPath := path.Join(*configDir, *configFile)
-    serverConfig, err := util.ServerConfigRead(configPath)
+    serverConfig, err := utils.ServerConfigRead(configPath)
     if err != nil {
         log.Errorf("Failed to load server config file(%s), err: %v.", configPath, err)
         return
@@ -61,10 +83,10 @@ func main() {
 
     // Init sqlite database
     dbFilePath := path.Join(*configDir, "server.sqlite3")
-    if util.Exists(dbFilePath) {
-        DB = util.InitDB(dbFilePath)
+    if utils.Exists(dbFilePath) {
+        DB = utils.InitDB(dbFilePath)
     } else {
-        DB = util.InitDB(dbFilePath)
+        DB = utils.InitDB(dbFilePath)
         err = DB.CreateUserInfoTable()
         if err != nil {
             log.Errorln("Failed to create user info table:", err)
@@ -92,17 +114,36 @@ func main() {
     // Run the router
     go router.run()
 
+    server := http.Server{
+        Addr:    serverConfig.Address,
+        Handler: nil,
+    }
+
     // Handle requests
     http.HandleFunc("/websocket", func(w http.ResponseWriter, r *http.Request) {
         // Serve the websocket connection
         ServeWs(router, w, r)
     })
 
-    http.HandleFunc("/hello", fooHandler)
+    http.HandleFunc("/get", getClipboardHandler)
 
-    // Listen and serve HTTPS
-    err = http.ListenAndServeTLS(serverConfig.Address, serverConfig.Certificate.CertFile, serverConfig.Certificate.KeyFile, nil)
-    if err != nil {
-        log.Fatal("ListenAndServe: ", err)
+    quit := make(chan os.Signal, 1)
+
+    go func() {
+        err = server.ListenAndServeTLS(serverConfig.Certificate.CertFile, serverConfig.Certificate.KeyFile)
+        if err != http.ErrServerClosed {
+            log.Errorln("Start service failed:", err)
+            quit <- syscall.SIGTERM
+        }
+    }()
+
+    signal.Notify(quit, os.Interrupt)
+    <-quit
+    log.Infoln("waiting for shutdown finishing...")
+    ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+    defer cancel()
+    if err := server.Shutdown(ctx); err != nil {
+        log.Fatalf("shutdown server err: %v.", err)
     }
+    log.Infoln("shutdown finished.")
 }
