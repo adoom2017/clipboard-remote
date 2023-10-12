@@ -167,7 +167,7 @@ func write(buf []byte) (<-chan struct{}, error) {
         for {
             time.Sleep(time.Second)
             cur, _, _ := getClipboardSequenceNumber.Call()
-            log.Infof("Write succeed: last count %d, new count: %d.", clipboardCount, cur)
+            log.Debugf("Write succeed: last count %d, new count: %d.", clipboardCount, cur)
             if cur != clipboardCount {
                 changed <- struct{}{}
                 close(changed)
@@ -412,7 +412,7 @@ func watch(ctx context.Context) <-chan []byte {
                 countLock.Lock()
                 cur, _, _ := getClipboardSequenceNumber.Call()
                 if clipboardCount != cur {
-                    log.Infof("Clipboard data changed, cur %d, last %d.", cur, clipboardCount)
+                    log.Debugf("Clipboard data changed, cur %d, last %d.", cur, clipboardCount)
                     b, err := read()
                     if b == nil || err != nil {
                         log.Errorln("Failed to read:", err)

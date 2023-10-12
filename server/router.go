@@ -1,6 +1,7 @@
 package main
 
 import (
+  "clipboard-remote/utils"
   "container/list"
 )
 
@@ -76,7 +77,13 @@ func (r *Router) run() {
             continue
           } else {
             // add content to other client send buffer
-            tmp.send <- message.content
+            wsm := &utils.WebsocketMessage{
+              Action: utils.ActionClipboardChanged,
+              UserID: message.id,
+              Data:   message.content,
+            }
+
+            tmp.send <- wsm.Encode()
           }
         }
       }

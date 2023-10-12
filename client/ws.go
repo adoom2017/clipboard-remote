@@ -26,7 +26,7 @@ type Client struct {
     conn   *websocket.Conn
 
     // {string: chan *types.WebsocketMessage}
-    readChs sync.Map
+    // readChs sync.Map
     writeCh chan *utils.WebsocketMessage
 }
 
@@ -158,25 +158,27 @@ func (c *Client) readFromServer(ctx context.Context) {
                 continue
             }
 
+            log.Infoln("Receive msg:", string(msg))
+
             wsm := &utils.WebsocketMessage{}
             err = wsm.Decode(msg)
             if err != nil {
-                log.Errorf("failed to read message: %v", err)
+                log.Errorf("Failed to read message: %v", err)
                 continue
             }
 
             // duplicate messages to all readers, readers should not edit the message
-            c.readChs.Range(func(k, v interface{}) bool {
+            /* c.readChs.Range(func(k, v interface{}) bool {
                 readerCh := v.(chan *utils.WebsocketMessage)
                 readerCh <- wsm
                 return true
-            })
+            }) */
 
             switch wsm.Action {
             case utils.ActionClipboardChanged:
-                log.Infof("Clipboard data has changed from %s, sync with local...", wsm.UserID)
+                log.Debugf("Clipboard data has changed from %s, sync with local...", wsm.UserID)
                 clipboard.Write(wsm.Data)
-                log.Infof("Clipboard data has changed from %s, sync succeed.", wsm.UserID)
+                log.Debugf("Clipboard data has changed from %s, sync succeed.", wsm.UserID)
             }
         }
     }
@@ -227,8 +229,6 @@ func (c *Client) watchClipboard(ctx context.Context, clipData <-chan []byte) {
                 continue
             }
 
-            log.Infoln("Get clipboard data:", string(data))
-
             c.writeCh <- &utils.WebsocketMessage{
                 Action: utils.ActionClipboardChanged,
                 UserID: c.ID,
@@ -239,6 +239,10 @@ func (c *Client) watchClipboard(ctx context.Context, clipData <-chan []byte) {
 }
 
 func (c *Client) close() {
+    if c.conn == nil {
+        return
+    }
+
     _ = c.conn.WriteMessage(websocket.BinaryMessage, (&utils.WebsocketMessage{
         Action: utils.ActionTerminate,
         UserID: c.ID,

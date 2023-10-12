@@ -48,7 +48,7 @@ type Client struct {
 
 // handRegisterMsg register handle function
 func (c *Client) handRegisterMsg(wsm *utils.WebsocketMessage) error {
-  user, ok := auth(wsm.Data)
+  user, ok := authWS(wsm.Data)
   if !ok {
     return utils.ErrAuthFailed
   }
@@ -200,7 +200,7 @@ func (c *Client) writeMsgToWs() {
   }
 }
 
-func auth(token []byte) (string, bool) {
+func authWS(token []byte) (string, bool) {
   tokens := strings.Split(utils.BytesToString(token), ":")
   if len(tokens) != 2 {
     log.Errorln("Invalid token:", token)

@@ -3,7 +3,6 @@ package main
 import (
     "clipboard-remote/utils"
     "context"
-    "encoding/base64"
     "flag"
     "net/http"
     "os"
@@ -44,30 +43,6 @@ func init() {
 
     // Set the log level
     log.SetLevel(log.InfoLevel)
-}
-
-func getClipboardHandler(w http.ResponseWriter, r *http.Request) {
-    user := r.URL.Query().Get("username")
-    buff, err := base64.StdEncoding.DecodeString(DB.GetClipContentByName(user))
-    if err != nil {
-        log.Errorln("Failed to get clipboard content for user:", user, err)
-        w.Write([]byte("Get clipboard info failed."))
-        return
-    }
-
-    content, err := utils.DecodeToStruct(buff)
-    if err != nil {
-        log.Errorln("Failed to get clipboard content for user:", user, err)
-        w.Write([]byte("Get clipboard info failed."))
-        return
-    }
-
-    if content.Type != utils.CLIP_TEXT {
-        w.Write([]byte("Unsupported content type."))
-        return
-    }
-
-    w.Write(content.Buff)
 }
 
 func main() {
@@ -125,7 +100,10 @@ func main() {
         ServeWs(router, w, r)
     })
 
-    http.HandleFunc("/get", getClipboardHandler)
+    http.HandleFunc("/clipboard/get", getClipboardHandler)
+    http.HandleFunc("/clipboard/set", func(w http.ResponseWriter, r *http.Request) {
+        setClipboardHandler(router, w, r)
+    })
 
     quit := make(chan os.Signal, 1)
 
