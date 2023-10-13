@@ -2,7 +2,7 @@ server: 127.0.0.1
 port: 443
 websocket-path: "/websocket"
 log:
-  path:
+  path: ./client.log
   log-level: info
 auth:
   user: user1

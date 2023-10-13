@@ -16,9 +16,6 @@ const (
   // Time allowed to write a message to the peer.
   writeWait = 10 * time.Second
 
-  // Maximum message size allowed from peer.
-  maxMessageSize = 10 * 1024 * 1024
-
   // Time allowed to read the next pong message from the peer.
   pongWait = 60 * time.Second
 
@@ -107,7 +104,7 @@ func (c *Client) readMsgFromWs() {
   }()
 
   // set pong message handler
-  c.conn.SetReadLimit(maxMessageSize)
+  c.conn.SetReadLimit(int64(GlobalConfig.MaxMsgSize))
   c.conn.SetReadDeadline(time.Now().Add(pongWait))
   c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 

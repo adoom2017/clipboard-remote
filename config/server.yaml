@@ -7,10 +7,10 @@ auths:
   - user: "user3"
     password: "passwd3"
 max-msg-size: 104857600
-websocket-path: "/ws"
+websocket-path: "/websocket"
 certificate:
   cert-file: "../certificate/ssl.crt"
   key-file: "../certificate/ssl.key"
 log:
-  path: "./aaa.log"
+  # path: "./server.log"
   log-level: "info"

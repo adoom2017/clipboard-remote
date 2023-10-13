@@ -131,7 +131,12 @@ func (c *Client) handleIO(ctx context.Context, clipData <-chan []byte) {
     }
 
     log.Debugln("Client id:", c.ID)
-    go c.watchClipboard(ctx, clipData)
+
+    // when auto mode, watch the clipboard content
+    if c.client.Mode == "auto" {
+        go c.watchClipboard(ctx, clipData)
+    }
+
     go c.readFromServer(ctx)
     go c.writeToServer(ctx)
 }
@@ -158,21 +163,12 @@ func (c *Client) readFromServer(ctx context.Context) {
                 continue
             }
 
-            log.Infoln("Receive msg:", string(msg))
-
             wsm := &utils.WebsocketMessage{}
             err = wsm.Decode(msg)
             if err != nil {
                 log.Errorf("Failed to read message: %v", err)
                 continue
             }
-
-            // duplicate messages to all readers, readers should not edit the message
-            /* c.readChs.Range(func(k, v interface{}) bool {
-                readerCh := v.(chan *utils.WebsocketMessage)
-                readerCh <- wsm
-                return true
-            }) */
 
             switch wsm.Action {
             case utils.ActionClipboardChanged:
@@ -189,9 +185,6 @@ func (c *Client) writeToServer(ctx context.Context) {
         select {
         case <-ctx.Done():
             log.Infoln("Exit write routine.")
-            if c.conn == nil {
-                log.Errorln("Connection was not ready for user:", c.ID)
-            }
             return
         case msg := <-c.writeCh:
             if c.conn == nil {
@@ -214,9 +207,6 @@ func (c *Client) watchClipboard(ctx context.Context, clipData <-chan []byte) {
         select {
         case <-ctx.Done():
             log.Infoln("Exit watch routine.")
-            if c.conn == nil {
-                log.Errorln("Connection was not ready for user:", c.ID)
-            }
             return
         case data, ok := <-clipData:
             if c.conn == nil || !ok {
