@@ -96,7 +96,14 @@ func main() {
 
 	// handle io local to server
 	client := NewClient(clientConfig)
-	go client.handleIO(ctx, clipboard.Watch(ctx))
+
+	if clientConfig.Mode == "auto" {
+		go client.handleIO(ctx, clipboard.Watch(ctx))
+	} else {
+		hk := &Hotkey{client: client}
+		go client.handleIO(ctx, nil)
+		go hk.listenHotkey(ctx)
+	}
 
 	<-interrupt
 	cancel()

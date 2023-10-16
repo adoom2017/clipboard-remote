@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"bytes"
-	"encoding/gob"
-	"os"
+    "bytes"
+    "encoding/gob"
+    "os"
 )
 
 type ClipType int
@@ -17,6 +17,18 @@ type ClipBoardBuff struct {
     Type ClipType
     Name string
     Buff []byte
+}
+
+type RespInfo struct {
+    Code    int       `json:"code"`
+    Message string    `json:"message"`
+    Data    *DataInfo `json:"data,omitempty"`
+}
+
+type DataInfo struct {
+    ClientID string `json:"client_id,omitempty"`
+    Type     string `json:"type,omitempty"`
+    Content  string `json:"content,omitempty"`
 }
 
 func EncodeToBytes(cb ClipBoardBuff) ([]byte, error) {

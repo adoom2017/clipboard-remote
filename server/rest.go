@@ -6,44 +6,19 @@ import (
   "encoding/json"
   "io"
   "net/http"
-  "strings"
 
   log "github.com/sirupsen/logrus"
 )
 
-type RespInfo struct {
-  Code    int       `json:"code"`
-  Message string    `json:"message"`
-  Data    *DataInfo `json:"data,omitempty"`
-}
-
-type DataInfo struct {
-  ClientID string `json:"client_id,omitempty"`
-  Type     string `json:"type,omitempty"`
-  Content  string `json:"content,omitempty"`
-}
-
-func authBasicHTTP(token string) string {
-  if len(token) <= 6 {
-    log.Errorln("Invalid token:", token)
+func authBasicHTTP(r *http.Request) string {
+  user, passwd, ok := r.BasicAuth()
+  if !ok {
     return ""
   }
 
-  authInfo, err := base64.StdEncoding.DecodeString(token[len("Basic "):])
-  if err != nil {
-    log.Errorln("Token decode failed:", err)
-    return ""
-  }
-
-  tokens := strings.Split(utils.BytesToString(authInfo), ":")
-  if len(tokens) != 2 {
-    log.Errorln("Invalid token:", authInfo)
-    return ""
-  }
-  user := tokens[0]
   pass := DB.GetPassword(user)
 
-  if pass != tokens[1] {
+  if pass != passwd {
     log.Errorf("Failed to auth user(%s).", user)
     return ""
   }
@@ -52,7 +27,7 @@ func authBasicHTTP(token string) string {
 }
 
 func authFailedResponse(w http.ResponseWriter) {
-  buff, _ := json.Marshal(RespInfo{
+  buff, _ := json.Marshal(utils.RespInfo{
     Code:    http.StatusUnauthorized,
     Message: "Authentication failed.",
   })
@@ -63,7 +38,7 @@ func authFailedResponse(w http.ResponseWriter) {
 }
 
 func normalFailedResponse(w http.ResponseWriter, msg string) {
-  buff, _ := json.Marshal(RespInfo{
+  buff, _ := json.Marshal(utils.RespInfo{
     Code:    http.StatusBadRequest,
     Message: msg,
   })
@@ -74,10 +49,10 @@ func normalFailedResponse(w http.ResponseWriter, msg string) {
 }
 
 func getSucceedResponse(w http.ResponseWriter, respBuff []byte) {
-  respInfo := RespInfo{
+  respInfo := utils.RespInfo{
     Code:    http.StatusOK,
     Message: "Get clipboard succeed.",
-    Data: &DataInfo{
+    Data: &utils.DataInfo{
       Type:    "text",
       Content: utils.BytesToString(respBuff),
     },
@@ -91,7 +66,7 @@ func getSucceedResponse(w http.ResponseWriter, respBuff []byte) {
 }
 
 func setSucceedResponse(w http.ResponseWriter) {
-  respInfo := RespInfo{
+  respInfo := utils.RespInfo{
     Code:    http.StatusOK,
     Message: "Set clipboard succeed.",
   }
@@ -104,7 +79,7 @@ func setSucceedResponse(w http.ResponseWriter) {
 }
 
 func getClipboardHandler(w http.ResponseWriter, r *http.Request) {
-  user := authBasicHTTP(r.Header.Get("Authorization"))
+  user := authBasicHTTP(r)
   if user == "" {
     log.Errorln("Authentication failed.")
     authFailedResponse(w)
@@ -134,7 +109,7 @@ func getClipboardHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func setClipboardHandler(router *Router, w http.ResponseWriter, r *http.Request) {
-  user := authBasicHTTP(r.Header.Get("Authorization"))
+  user := authBasicHTTP(r)
   if user == "" {
     log.Errorln("Authentication failed.")
     authFailedResponse(w)
@@ -148,7 +123,7 @@ func setClipboardHandler(router *Router, w http.ResponseWriter, r *http.Request)
     return
   }
 
-  var dataInfo DataInfo
+  var dataInfo utils.DataInfo
   if err = json.Unmarshal(body, &dataInfo); err != nil {
     normalFailedResponse(w, err.Error())
     return

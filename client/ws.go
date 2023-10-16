@@ -21,7 +21,7 @@ import (
 type Client struct {
     sync.Mutex
 
-    client *utils.ClientConfig
+    config *utils.ClientConfig
     ID     string
     conn   *websocket.Conn
 
@@ -42,7 +42,7 @@ func NewClient(c *utils.ClientConfig) *Client {
     return &Client{
         ID:      id,
         writeCh: make(chan *utils.WebsocketMessage, 10),
-        client:  c,
+        config:  c,
     }
 }
 
@@ -51,10 +51,10 @@ func (c *Client) connect() error {
     defer c.Unlock()
 
     dial := websocket.Dialer{TLSClientConfig: &tls.Config{
-        InsecureSkipVerify: c.client.InsecureSkipVerify,
+        InsecureSkipVerify: c.config.InsecureSkipVerify,
     }}
 
-    u := url.URL{Scheme: "wss", Host: c.client.Host, Path: c.client.WebsocketPath}
+    u := url.URL{Scheme: "wss", Host: c.config.Host, Path: c.config.WebsocketPath}
     conn, _, err := dial.Dial(u.String(), nil)
     if err != nil {
         return fmt.Errorf("failed to dial(%s): %w", u.String(), err)
@@ -62,14 +62,14 @@ func (c *Client) connect() error {
     c.conn = conn
 
     // hash password
-    hashBytes, err := bcrypt.GenerateFromPassword([]byte(c.client.Auth.Password), bcrypt.DefaultCost)
+    hashBytes, err := bcrypt.GenerateFromPassword([]byte(c.config.Auth.Password), bcrypt.DefaultCost)
     if err != nil {
         return fmt.Errorf("failed to hash password: %w", err)
     }
 
     // handshake with server
     c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-    creds := c.client.Auth.User + ":" + utils.BytesToString(hashBytes)
+    creds := c.config.Auth.User + ":" + utils.BytesToString(hashBytes)
     err = c.conn.WriteMessage(websocket.BinaryMessage, (&utils.WebsocketMessage{
         Action: utils.ActionHandshakeRegister,
         UserID: c.ID,
@@ -133,7 +133,7 @@ func (c *Client) handleIO(ctx context.Context, clipData <-chan []byte) {
     log.Debugln("Client id:", c.ID)
 
     // when auto mode, watch the clipboard content
-    if c.client.Mode == "auto" {
+    if clipData != nil {
         go c.watchClipboard(ctx, clipData)
     }
 
