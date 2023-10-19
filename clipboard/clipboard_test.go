@@ -1,8 +1,8 @@
 package clipboard
 
 import (
-    "os"
-    "testing"
+  "os"
+  "testing"
 )
 
 /* func TestRead(t *testing.T) {
@@ -34,15 +34,15 @@ import (
 } */
 
 func TestWrite(t *testing.T) {
-    buf, err := os.ReadFile("D:\\clipboard\\clip.bin")
-    if err != nil {
-        t.Fatal("Failed to read bin file:", err)
-        return
-    }
+  buf, err := os.ReadFile("D:\\clipboard\\clip.bin")
+  if err != nil {
+    t.Fatal("Failed to read bin file:", err)
+    return
+  }
 
-    Write(buf)
-    //<-changed
-    t.Log("Succeed to write clipboard.")
+  Write(buf)
+  //<-changed
+  t.Log("Succeed to write clipboard.")
 }
 
 /* func TestWatch(t *testing.T) {
