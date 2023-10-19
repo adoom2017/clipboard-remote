@@ -79,6 +79,14 @@ func ClientConfigRead(configFile string) (*ClientConfig, error) {
 		config.Log.LogLevel = "info"
 	}
 
+	if config.HotKey.UploadKey == "" {
+		config.HotKey.UploadKey = "Alt+C"
+	}
+
+	if config.HotKey.DownloadKey == "" {
+		config.HotKey.DownloadKey = "Alt+V"
+	}
+
 	return &config, nil
 }
 

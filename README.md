@@ -63,4 +63,4 @@ mode: manual
 Modifier key combos are separated with a `+` and are prepended to a key in a consistent order as follows: `Control+Alt+Shift+KEY`.
 
 `Modifier Key`: Control Alt Shift
-`KEY`: A B C .etc, use upcase character, Space Left Rigth Up Down
+`KEY`: A B C .etc and Space, use upcase character.
