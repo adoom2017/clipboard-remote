@@ -9,16 +9,101 @@ import (
   "fmt"
   "io"
   "net/http"
+  "strings"
 
   log "github.com/sirupsen/logrus"
   "golang.design/x/hotkey"
 )
 
 type Hotkey struct {
-  client *Client
+  client         *Client
+  hotkeyUpload   string
+  hotKeyDownload string
 }
 
-func registerHotkey(key hotkey.Key, mods ...hotkey.Modifier) (*hotkey.Hotkey, error) {
+func switchKeys(keyString string) (hotkey.Key, []hotkey.Modifier) {
+  hotkeys := strings.Split(keyString, "+")
+
+  var tempModKeys []hotkey.Modifier
+  for i := 0; i < len(hotkeys)-1; i++ {
+    switch hotkeys[i] {
+    case "Control":
+      fallthrough
+    case "CONTROL":
+      tempModKeys = append(tempModKeys, hotkey.ModCtrl)
+    case "Alt":
+      fallthrough
+    case "ALT":
+      tempModKeys = append(tempModKeys, hotkey.ModAlt)
+    case "Shift":
+      fallthrough
+    case "SHIFT":
+      tempModKeys = append(tempModKeys, hotkey.ModShift)
+    }
+  }
+
+  var tempKey hotkey.Key
+  switch hotkeys[len(hotkeys)-1] {
+  case "A":
+    tempKey = hotkey.KeyA
+  case "B":
+    tempKey = hotkey.KeyB
+  case "C":
+    tempKey = hotkey.KeyC
+  case "D":
+    tempKey = hotkey.KeyD
+  case "E":
+    tempKey = hotkey.KeyE
+  case "F":
+    tempKey = hotkey.KeyF
+  case "G":
+    tempKey = hotkey.KeyG
+  case "H":
+    tempKey = hotkey.KeyH
+  case "I":
+    tempKey = hotkey.KeyI
+  case "J":
+    tempKey = hotkey.KeyJ
+  case "K":
+    tempKey = hotkey.KeyK
+  case "L":
+    tempKey = hotkey.KeyL
+  case "M":
+    tempKey = hotkey.KeyM
+  case "N":
+    tempKey = hotkey.KeyN
+  case "O":
+    tempKey = hotkey.KeyO
+  case "P":
+    tempKey = hotkey.KeyP
+  case "Q":
+    tempKey = hotkey.KeyQ
+  case "R":
+    tempKey = hotkey.KeyR
+  case "S":
+    tempKey = hotkey.KeyS
+  case "T":
+    tempKey = hotkey.KeyT
+  case "U":
+    tempKey = hotkey.KeyU
+  case "V":
+    tempKey = hotkey.KeyV
+  case "W":
+    tempKey = hotkey.KeyW
+  case "X":
+    tempKey = hotkey.KeyX
+  case "Y":
+    tempKey = hotkey.KeyY
+  case "Z":
+    tempKey = hotkey.KeyZ
+  case "Space":
+    tempKey = hotkey.KeySpace
+  }
+
+  return tempKey, tempModKeys
+}
+
+func registerHotkey(key hotkey.Key, mods []hotkey.Modifier) (*hotkey.Hotkey, error) {
   modifier := []hotkey.Modifier{}
   modifier = append(modifier, mods...)
   hk := hotkey.New(modifier, key)
@@ -32,13 +117,16 @@ func registerHotkey(key hotkey.Key, mods ...hotkey.Modifier) (*hotkey.Hotkey, er
 }
 
 func (h *Hotkey) listenHotkey(ctx context.Context) (err error) {
-  upKey, err := registerHotkey(hotkey.KeyC, hotkey.ModAlt)
+
+  tmpKey, tmpMods := switchKeys(h.hotkeyUpload)
+  upKey, err := registerHotkey(tmpKey, tmpMods)
   if err != nil {
     log.Errorln("Failed to register upload key:", err)
     return nil
   }
 
-  downKey, err := registerHotkey(hotkey.KeyV, hotkey.ModAlt)
+  tmpKey, tmpMods = switchKeys(h.hotKeyDownload)
+  downKey, err := registerHotkey(tmpKey, tmpMods)
   if err != nil {
     log.Errorln("Failed to register download key:", err)
     return nil

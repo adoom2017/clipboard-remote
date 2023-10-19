@@ -10,13 +10,14 @@ import (
 
 // ClientConfig clipboard client config
 type ClientConfig struct {
-	Host               string     `yaml:"server"`
-	Port               int        `yaml:"port"`
-	WebsocketPath      string     `yaml:"websocket-path"`
-	Log                LogConfig  `yaml:"log"`
-	Auth               AuthConfig `yaml:"auth"`
-	InsecureSkipVerify bool       `yaml:"skip-cert-verify"`
-	Mode               string     `yaml:"mode"`
+	Host               string       `yaml:"server"`
+	Port               int          `yaml:"port"`
+	WebsocketPath      string       `yaml:"websocket-path"`
+	Log                LogConfig    `yaml:"log"`
+	Auth               AuthConfig   `yaml:"auth"`
+	InsecureSkipVerify bool         `yaml:"skip-cert-verify"`
+	HotKey             HotKeyConfig `yaml:"hotkey"`
+	Mode               string       `yaml:"mode"`
 }
 
 // ServerConfig clipboard server config
@@ -45,6 +46,11 @@ type LogConfig struct {
 type AuthConfig struct {
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
+}
+
+type HotKeyConfig struct {
+	UploadKey   string `yaml:"upload"`
+	DownloadKey string `yaml:"download"`
 }
 
 // ClientConfigRead read the client config, and set default value

@@ -58,3 +58,9 @@ mode: manual
 ./client -d /path/to/client-config/directory -f /path/to/config/file
 ```
 > If no configuration file (-f) is specified, the system will automatically search for the default configuration file named **client.yaml** in the configuration directory.
+
+#### 2.2.3 hotkey
+Modifier key combos are separated with a `+` and are prepended to a key in a consistent order as follows: `Control+Alt+Shift+KEY`.
+
+`Modifier Key`: Control Alt Shift
+`KEY`: A B C .etc, use upcase character, Space Left Rigth Up Down
