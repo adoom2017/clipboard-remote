@@ -100,7 +100,11 @@ func main() {
   if clientConfig.Mode == "auto" {
     go client.handleIO(ctx, clipboard.Watch(ctx))
   } else {
-    hk := &Hotkey{client: client}
+    hk := &Hotkey{
+      client:         client,
+      hotkeyUpload:   clientConfig.HotKey.UploadKey,
+      hotkeyDownload: clientConfig.HotKey.DownloadKey,
+    }
     go client.handleIO(ctx, nil)
     go hk.listenHotkey(ctx)
   }

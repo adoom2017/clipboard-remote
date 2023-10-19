@@ -1,7 +1,0 @@
-Oct 16 20:56:14.193 [ws.go:97 main.(*Client).connect] [INFO] Hand shake succeed: HZG20210528001
-Oct 16 20:56:14.268 [ws.go:119 main.(*Client).reconnect] [INFO] Connected to server succeed.
-Oct 16 20:58:15.692 [client.go:110 main.main] [INFO] Waiting client to exist...
-Oct 16 20:58:15.692 [hotkey.go:54 main.(*Hotkey).listenHotkey] [INFO] Exit hotkey listen routine.
-Oct 16 20:58:15.692 [ws.go:187 main.(*Client).writeToServer] [INFO] Exit write routine.
-Oct 16 20:58:15.693 [ws.go:154 main.(*Client).readFromServer] [ERRO] Failed to read message from server: read tcp 127.0.0.1:63467->127.0.0.1:443: use of closed network connection
-Oct 16 20:58:15.693 [ws.go:148 main.(*Client).readFromServer] [INFO] Exit read routine.

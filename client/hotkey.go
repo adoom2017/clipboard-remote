@@ -18,11 +18,13 @@ import (
 type Hotkey struct {
   client         *Client
   hotkeyUpload   string
-  hotKeyDownload string
+  hotkeyDownload string
 }
 
 func switchKeys(keyString string) (hotkey.Key, []hotkey.Modifier) {
   hotkeys := strings.Split(keyString, "+")
+
+  log.Infoln("hotkey:", hotkeys)
 
   var tempModKeys []hotkey.Modifier
   for i := 0; i < len(hotkeys)-1; i++ {
@@ -122,14 +124,14 @@ func (h *Hotkey) listenHotkey(ctx context.Context) (err error) {
   upKey, err := registerHotkey(tmpKey, tmpMods)
   if err != nil {
     log.Errorln("Failed to register upload key:", err)
-    return nil
+    return err
   }
 
-  tmpKey, tmpMods = switchKeys(h.hotKeyDownload)
+  tmpKey, tmpMods = switchKeys(h.hotkeyDownload)
   downKey, err := registerHotkey(tmpKey, tmpMods)
   if err != nil {
     log.Errorln("Failed to register download key:", err)
-    return nil
+    return err
   }
 
   for {
