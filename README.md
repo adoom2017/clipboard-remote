@@ -1,4 +1,5 @@
 ## 1. Architecture
+![architecture](./architecture.png)
 
 ## 2. Usage
 ### 2.1 Server
