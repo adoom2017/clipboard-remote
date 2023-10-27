@@ -41,11 +41,14 @@ type Client struct {
 
   // message username
   username string
+
+  // is clipboard content change auto send
+  auto bool
 }
 
 // handRegisterMsg register handle function
 func (c *Client) handRegisterMsg(wsm *utils.WebsocketMessage) error {
-  user, ok := authWS(wsm.Data)
+  user, mode, ok := authWS(wsm.Data)
   if !ok {
     return utils.ErrAuthFailed
   }
@@ -60,6 +63,12 @@ func (c *Client) handRegisterMsg(wsm *utils.WebsocketMessage) error {
 
   c.id = wsm.UserID
   c.username = user
+
+  if mode == "auto" {
+    c.auto = true
+  } else {
+    c.auto = false
+  }
 
   // register client to router
   c.router.register <- c
@@ -197,11 +206,12 @@ func (c *Client) writeMsgToWs() {
   }
 }
 
-func authWS(token []byte) (string, bool) {
+// authWS client authentication, return username, mode, succeed
+func authWS(token []byte) (string, string, bool) {
   tokens := strings.Split(utils.BytesToString(token), ":")
-  if len(tokens) != 2 {
+  if len(tokens) != 3 {
     log.Errorln("Invalid token:", token)
-    return "", false
+    return "", "", false
   }
   user := tokens[0]
   pass := DB.GetPassword(user)
@@ -209,10 +219,10 @@ func authWS(token []byte) (string, bool) {
   err := bcrypt.CompareHashAndPassword(utils.StringToBytes((tokens[1])), utils.StringToBytes(pass))
   if err != nil {
     log.Errorf("Failed to auth user(%s), error: %v.", user, err)
-    return user, false
+    return user, tokens[2], false
   }
 
-  return user, true
+  return user, tokens[2], true
 }
 
 // ServeWs handles websocket requests from the peer.

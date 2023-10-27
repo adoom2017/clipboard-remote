@@ -73,7 +73,7 @@ func (r *Router) run() {
     case message := <-r.broadcast:
       if tmpList, ok := r.clients[message.username]; ok {
         for i := tmpList.Front(); i != nil; i = i.Next() {
-          if tmp := i.Value.(*Client); message.id == tmp.id {
+          if tmp := i.Value.(*Client); message.id == tmp.id || !tmp.auto {
             continue
           } else {
             // add content to other client send buffer
