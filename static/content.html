@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+
+    <!-- Loding font -->
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,700" rel="stylesheet">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" type="text/css" href="css/styles.css">
+
+    <title>Clipboard Info</title>
+  </head>
+  <body>
+    <!-- Backgrounds -->
+    <div id="login-bg" class="container-fluid">
+      <div class="bg-color"></div>
+      <div class="bg-color"></div>
+    </div>
+    <!-- End Backgrounds -->
+
+    <div class="container" id="content">
+      <div class="row justify-content-center">
+        <h2>剪贴板内容</h2>
+        <div class="col-lg-8" style="white-space:normal; word-break:break-all;overflow:hidden;">
+          {{ range . }}
+          <h2>{{ .UserName }}</h2>
+          <p>{{ .Content }}</p>
+          {{ end }}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

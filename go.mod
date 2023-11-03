@@ -25,3 +25,11 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+require (
+	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/sessions v1.2.1
+	github.com/robfig/cron/v3 v3.0.0 // indirect
+)
+
+require github.com/gorilla/securecookie v1.1.1 // indirect

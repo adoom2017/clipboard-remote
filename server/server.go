@@ -12,7 +12,9 @@ import (
   "syscall"
   "time"
 
+  "github.com/gorilla/mux"
   "github.com/gorilla/websocket"
+  "github.com/robfig/cron/v3"
   log "github.com/sirupsen/logrus"
 )
 
@@ -33,6 +35,11 @@ var (
   GlobalConfig *utils.ServerConfig
 )
 
+type DisplayInfo struct {
+  UserName string
+  Content  string
+}
+
 func init() {
   // Set the report callers to true
   log.SetReportCaller(true)
@@ -48,6 +55,27 @@ func init() {
 
   // Set the log level
   log.SetLevel(log.InfoLevel)
+}
+
+func InitHttpRouter(sockRouter *Router) *mux.Router {
+  clipHandler := NewClipHandler(sockRouter)
+
+  muxRouter := mux.NewRouter()
+
+  // Handle websocket
+  muxRouter.HandleFunc(GlobalConfig.WebsocketPath, clipHandler.WsHandlerFunc)
+
+  // Handle restful
+  muxRouter.HandleFunc("/clipboard/get", clipHandler.RestGetClipHandlerFunc)
+  muxRouter.HandleFunc("/clipboard/set", clipHandler.RestSetClipHandlerFunc)
+  muxRouter.HandleFunc("/login", clipHandler.DoLoginHandlerFunc)
+
+  // Handle static resource
+  muxRouter.PathPrefix("/css").Handler(http.FileServer(http.Dir("../static")))
+  muxRouter.HandleFunc("/content", clipHandler.ContentHtmlHandlerFunc)
+  muxRouter.HandleFunc("/", clipHandler.LoginHtmlHandlerFunc)
+
+  return muxRouter
 }
 
 func main() {
@@ -133,6 +161,18 @@ func main() {
     return
   }
 
+  c := cron.New()
+  defer c.Stop()
+  c.AddFunc("0 0 * * *", func() {
+    err = DB.VacuumDB()
+    if err != nil {
+      log.Errorln("Failed to vacuum database:", err)
+    } else {
+      log.Infoln("Succeed to vacuum database.")
+    }
+  })
+  c.Start()
+
   // Create a new router
   router := NewRouter()
   // Run the router
@@ -140,19 +180,8 @@ func main() {
 
   server := http.Server{
     Addr:    GlobalConfig.Address,
-    Handler: nil,
+    Handler: InitHttpRouter(router),
   }
-
-  // Handle requests
-  http.HandleFunc(GlobalConfig.WebsocketPath, func(w http.ResponseWriter, r *http.Request) {
-    // Serve the websocket connection
-    ServeWs(router, w, r)
-  })
-
-  http.HandleFunc("/clipboard/get", getClipboardHandler)
-  http.HandleFunc("/clipboard/set", func(w http.ResponseWriter, r *http.Request) {
-    setClipboardHandler(router, w, r)
-  })
 
   quit := make(chan os.Signal, 1)
 

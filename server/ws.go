@@ -215,6 +215,9 @@ func authWS(token []byte) (string, string, bool) {
   }
   user := tokens[0]
   pass := DB.GetPassword(user)
+  if pass == "" {
+    return "", "", false
+  }
 
   err := bcrypt.CompareHashAndPassword(utils.StringToBytes((tokens[1])), utils.StringToBytes(pass))
   if err != nil {

@@ -1,21 +1,21 @@
 package main
 
 import (
-	"context"
-	"crypto/tls"
-	"fmt"
-	"net/url"
-	"os"
-	"sync"
-	"time"
+  "context"
+  "crypto/tls"
+  "fmt"
+  "net/url"
+  "os"
+  "sync"
+  "time"
 
-	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
+  "github.com/google/uuid"
+  "github.com/gorilla/websocket"
+  log "github.com/sirupsen/logrus"
+  "golang.org/x/crypto/bcrypt"
 
-	"clipboard-remote/clipboard"
-	"clipboard-remote/utils"
+  "clipboard-remote/clipboard"
+  "clipboard-remote/utils"
 )
 
 type Client struct {
@@ -25,7 +25,7 @@ type Client struct {
   ID     string
   conn   *websocket.Conn
 
-  // {string: chan *types.WebsocketMessage}
+  // {message: chan *types.WebsocketMessage}
   // readChs sync.Map
   writeCh chan *utils.WebsocketMessage
 }

@@ -83,4 +83,9 @@ func TestContentDB(t *testing.T) {
   if len(tempList) != 5 {
     t.Fatal("Num Error:", len(tempList))
   }
+
+  err = db.VacuumDB()
+  if err != nil {
+    t.Fatal("Vacuum database error:", err)
+  }
 }

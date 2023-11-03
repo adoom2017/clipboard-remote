@@ -212,3 +212,13 @@ func (db *DBInfo) GetClipContents() []ClipContentInfo {
 
   return clips
 }
+
+func (db *DBInfo) VacuumDB() error {
+  if db.conn == nil {
+    return nil
+  }
+
+  _, err := db.conn.Exec("VACUUM")
+
+  return err
+}
