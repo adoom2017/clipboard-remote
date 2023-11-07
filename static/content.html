@@ -26,12 +26,17 @@
 
     <div class="container" id="content">
       <div class="row justify-content-center">
-        <h2>剪贴板内容</h2>
         <div class="col-lg-8" style="white-space:normal; word-break:break-all;overflow:hidden;">
-          {{ range . }}
-          <h2>{{ .UserName }}</h2>
-          <p>{{ .Content }}</p>
-          {{ end }}
+          <header><h1 class="row justify-content-center">剪贴板内容</h1></header>
+            <section>
+              {{ range . }}
+              <article>
+                <h1>{{ .ClientID }}</h1>
+                <h3>{{ .Timestamp }}</h3>
+                <p>{{ .Content }}</p>
+              </article>
+              {{ end }}
+            </section>
         </div>
       </div>
     </div>

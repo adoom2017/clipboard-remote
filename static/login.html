@@ -44,6 +44,11 @@
       <div class="col-lg-8">
         <div class="login">
           <h2>剪贴板内容</h2>
+          {{ if . }}
+          <p class="text-danger font-size-small">
+            {{ . }}
+          </p>
+          {{ end }}
           <!-- Loging form -->
           <form id="login-form-id" action="login" method="POST">
             <div class="form-group">

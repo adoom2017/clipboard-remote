@@ -1,3 +1,4 @@
 *drawio*
-config/server.sqlite3
+config/*.sqlite3
 config/client2.yaml
+*.txt

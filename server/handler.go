@@ -4,136 +4,181 @@ import (
   "clipboard-remote/utils"
   "encoding/base64"
   "encoding/json"
+  "html/template"
   "io"
   "net/http"
-  "strings"
-  "text/template"
 
-  "github.com/google/uuid"
   log "github.com/sirupsen/logrus"
 )
 
 type ClipHandler struct {
-  router     *Router
-  respWriter http.ResponseWriter
-  req        *http.Request
+  router *Router
+  //respWriter http.ResponseWriter
+  //req        *http.Request
 }
 
 func NewClipHandler(r *Router) *ClipHandler {
   return &ClipHandler{router: r}
 }
 
-func SessionID() string {
-  uuid_s := uuid.New().String()
-
-  return strings.ReplaceAll(uuid_s, "-", "")
-}
-
-func (clip *ClipHandler) authBasicHTTP() string {
-  user, passwd, ok := clip.req.BasicAuth()
+func GetSessionUser(r *http.Request) string {
+  session, _ := SessionStore.Get(r, "session-id")
+  s, ok := session.Values["user"]
   if !ok {
     return ""
   }
 
-  pass := DB.GetPassword(user)
-
-  // if no password find means user not exist
-  if pass == "" || pass != passwd {
-    log.Errorf("Failed to auth user(%s).", user)
-    return ""
-  }
-
-  return user
+  return s.(string)
 }
 
-func (clip *ClipHandler) sendResponse(buff []byte, statusCode int) {
-  clip.respWriter.Header().Set("Content-Type", "application/json")
-  clip.respWriter.WriteHeader(http.StatusBadRequest)
-  clip.respWriter.Write(buff)
+func SaveSessionUser(w http.ResponseWriter, r *http.Request, username string) {
+  session, _ := SessionStore.Get(r, "session-id")
+
+  session.Values["user"] = username
+  session.Options.HttpOnly = true
+  session.Options.Secure = true
+
+  SessionStore.Save(r, w, session)
 }
 
-func (clip *ClipHandler) authFailedResponse() {
-  buff, _ := json.Marshal(utils.RespInfo{
-    Code:    http.StatusUnauthorized,
-    Message: "Authentication failed.",
+type RestfulRespInfo struct {
+  Response utils.RespInfo
+  Writer   http.ResponseWriter // http response writer
+}
+
+func (rest *RestfulRespInfo) send() {
+  b, _ := json.Marshal(rest.Response)
+
+  rest.Writer.Header().Set("Content-Type", "application/json")
+  rest.Writer.WriteHeader(rest.Response.Code)
+  rest.Writer.Write(b)
+}
+
+// UserBasicAuthMDW http basic authentication middleware func
+func UserBasicAuthMDW(next http.Handler) http.Handler {
+  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    user := GetSessionUser(r)
+
+    // restful API reponse sender
+    rest := RestfulRespInfo{
+      Writer: w,
+      Response: utils.RespInfo{
+        Code:    http.StatusOK,
+        Message: "Succeed.",
+      },
+    }
+
+    // never login
+    if user == "" {
+      // authentication process
+      user, passwd, ok := r.BasicAuth()
+      if !ok {
+        log.Errorln("No Basic Authentication Info.")
+
+        w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+
+        rest.Response.Code = http.StatusUnauthorized
+        rest.Response.Message = "Authentication Failed."
+
+        rest.send()
+        return
+      }
+
+      pass := DB.GetPassword(user)
+
+      // if no password find means user not exist
+      if pass == "" || pass != passwd {
+        log.Errorln("Failed to authentication user:", user)
+
+        w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+
+        rest.Response.Code = http.StatusUnauthorized
+        rest.Response.Message = "Authentication Failed."
+
+        rest.send()
+        return
+      }
+
+      // use session for application
+      SaveSessionUser(w, r, user)
+    }
+
+    next.ServeHTTP(w, r)
   })
-
-  clip.sendResponse(buff, http.StatusUnauthorized)
-}
-
-func (clip *ClipHandler) normalFailedResponse(msg string) {
-  buff, _ := json.Marshal(utils.RespInfo{
-    Code:    http.StatusBadRequest,
-    Message: msg,
-  })
-
-  clip.sendResponse(buff, http.StatusBadRequest)
 }
 
 // RestGetClipHandler Get clipboard content handler for restful API
 func (clip *ClipHandler) RestGetClipHandlerFunc(w http.ResponseWriter, r *http.Request) {
-  clip.req = r
-  clip.respWriter = w
+  user := GetSessionUser(r)
 
-  user := clip.authBasicHTTP()
-  if user == "" {
-    log.Errorln("Authentication failed.")
-    clip.authFailedResponse()
-    return
+  // restful API reponse sender
+  rest := RestfulRespInfo{
+    Writer: w,
+    Response: utils.RespInfo{
+      Code:    http.StatusOK,
+      Message: "Get clipboard succeed.",
+    },
   }
+
+  defer rest.send()
 
   buff, err := base64.StdEncoding.DecodeString(DB.GetClipContentByName(user))
   if err != nil {
     log.Errorln("Failed to get clipboard content for user:", user, err)
-    clip.normalFailedResponse("Get clipboard info failed.")
+
+    rest.Response.Code = http.StatusInternalServerError
+    rest.Response.Message = "Get Clipboard Content Failed."
     return
   }
 
   content, err := utils.DecodeToStruct(buff)
   if err != nil {
     log.Errorln("Failed to get clipboard content for user:", user, err)
-    clip.normalFailedResponse("Get clipboard info failed.")
+
+    rest.Response.Code = http.StatusInternalServerError
+    rest.Response.Message = "Get Clipboard Content Failed."
     return
   }
 
   if content.Type != utils.CLIP_TEXT {
-    clip.normalFailedResponse("Unsupported content type.")
+    rest.Response.Code = http.StatusInternalServerError
+    rest.Response.Message = "Get Clipboard Content Failed."
     return
   }
 
-  respInfo := utils.RespInfo{
-    Code:    http.StatusOK,
-    Message: "Get clipboard succeed.",
-    Data: &utils.DataInfo{
-      Type:    "text",
-      Content: utils.BytesToString(content.Buff),
-    },
+  rest.Response.Data = &utils.DataInfo{
+    Type:    "text",
+    Content: utils.BytesToString(content.Buff),
   }
-
-  result, _ := json.Marshal(respInfo)
-
-  clip.sendResponse(result, http.StatusOK)
 }
 
 // RestGetClipHandler Set clipboard content handler for restful API
 func (clip *ClipHandler) RestSetClipHandlerFunc(w http.ResponseWriter, r *http.Request) {
-  user := clip.authBasicHTTP()
-  if user == "" {
-    log.Errorln("Authentication failed.")
-    clip.authFailedResponse()
-    return
+  user := GetSessionUser(r)
+
+  // restful API reponse sender
+  rest := RestfulRespInfo{
+    Writer: w,
+    Response: utils.RespInfo{
+      Code:    http.StatusOK,
+      Message: "Set clipboard succeed.",
+    },
   }
+
+  defer rest.send()
 
   // Get content
   body, err := io.ReadAll(r.Body)
   if err != nil {
-    clip.normalFailedResponse(err.Error())
+    rest.Response.Code = http.StatusInternalServerError
+    rest.Response.Message = err.Error()
     return
   }
 
   var dataInfo utils.DataInfo
   if err = json.Unmarshal(body, &dataInfo); err != nil {
-    clip.normalFailedResponse(err.Error())
+    rest.Response.Code = http.StatusInternalServerError
+    rest.Response.Message = err.Error()
     return
   }
 
@@ -160,38 +205,36 @@ func (clip *ClipHandler) RestSetClipHandlerFunc(w http.ResponseWriter, r *http.R
     username: user,
     content:  clipBuff,
   }
-
-  respInfo := utils.RespInfo{
-    Code:    http.StatusOK,
-    Message: "Set clipboard succeed.",
-  }
-
-  buff, _ := json.Marshal(respInfo)
-
-  clip.sendResponse(buff, http.StatusOK)
 }
 
 // LoginHandlerFunc handler for login action
 func (clip *ClipHandler) DoLoginHandlerFunc(w http.ResponseWriter, r *http.Request) {
-  r.ParseForm()
+  user := GetSessionUser(r)
 
-  user := r.FormValue("username")
-  passwd := r.FormValue("password")
-  //remember := r.FormValue("remember-check")
+  // never login
+  if user == "" {
+    // authentication process
+    r.ParseForm()
 
-  pass := DB.GetPassword(user)
+    user := r.FormValue("username")
+    passwd := r.FormValue("password")
+    //remember := r.FormValue("remember-check")
 
-  if pass == "" || pass != passwd {
-    log.Errorf("Failed to auth user(%s).", user)
+    pass := DB.GetPassword(user)
 
-    t, err := template.ParseFiles("../static/login_fail.html")
-    if err != nil {
-      log.Println(err)
+    if pass == "" || pass != passwd {
+      log.Errorf("Failed to auth user(%s).", user)
+
+      t, err := template.ParseFiles("../static/login.html")
+      if err != nil {
+        log.Println(err)
+      }
+
+      t.Execute(w, "用户名或者密码错误，请重新登录！")
+      return
     }
 
-    t.Execute(w, "用户名或者密码错误！！！")
-
-    return
+    SaveSessionUser(w, r, user)
   }
 
   http.Redirect(w, r, "/content", http.StatusFound)
@@ -199,9 +242,16 @@ func (clip *ClipHandler) DoLoginHandlerFunc(w http.ResponseWriter, r *http.Reque
 
 // LoginHtmlHandlerFunc handler for login html page
 func (clip *ClipHandler) LoginHtmlHandlerFunc(w http.ResponseWriter, r *http.Request) {
+  u := GetSessionUser(r)
+  if u != "" {
+    http.Redirect(w, r, "/content", http.StatusFound)
+    return
+  }
+
   t, err := template.ParseFiles("../static/login.html")
   if err != nil {
-    log.Println(err)
+    log.Errorln("Failed to parse template file: ", err)
+    return
   }
 
   t.Execute(w, nil)
@@ -209,6 +259,14 @@ func (clip *ClipHandler) LoginHtmlHandlerFunc(w http.ResponseWriter, r *http.Req
 
 // ContentHtmlHandlerFunc handler for content html page
 func (clip *ClipHandler) ContentHtmlHandlerFunc(w http.ResponseWriter, r *http.Request) {
+  user := GetSessionUser(r)
+
+  // never login
+  if user == "" {
+    http.Redirect(w, r, "/", http.StatusFound)
+    return
+  }
+
   t, err := template.ParseFiles("../static/content.html")
   if err != nil {
     log.Println(err)
@@ -220,7 +278,12 @@ func (clip *ClipHandler) ContentHtmlHandlerFunc(w http.ResponseWriter, r *http.R
     buff, _ := base64.StdEncoding.DecodeString(content.Content)
     clipInfo, _ := utils.DecodeToStruct(buff)
 
-    clipInfos = append(clipInfos, DisplayInfo{UserName: content.Username, Content: utils.BytesToString(clipInfo.Buff)})
+    clipInfos = append(clipInfos, DisplayInfo{
+      ClientID:  content.ClientID,
+      Timestamp: content.Timestamp,
+      UserName:  content.Username,
+      Content:   utils.BytesToString(clipInfo.Buff),
+    })
   }
 
   t.Execute(w, clipInfos)

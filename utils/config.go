@@ -22,12 +22,18 @@ type ClientConfig struct {
 
 // ServerConfig clipboard server config
 type ServerConfig struct {
-  Auths         []AuthConfig `yaml:"auths"`
-  MaxMsgSize    int          `yaml:"max-msg-size"`
-  Address       string       `yaml:"addr"`
-  WebsocketPath string       `yaml:"websocket-path"`
-  Certificate   CertConfig   `yaml:"certificate"`
-  Log           LogConfig    `yaml:"log"`
+  Auths         []AuthConfig  `yaml:"auths"`
+  MaxMsgSize    int           `yaml:"max-msg-size"`
+  Address       string        `yaml:"addr"`
+  WebsocketPath string        `yaml:"websocket-path"`
+  Certificate   CertConfig    `yaml:"certificate"`
+  Log           LogConfig     `yaml:"log"`
+  Session       SessionConfig `yaml:"session"`
+}
+
+type SessionConfig struct {
+  Key    string `yaml:"key"`
+  MaxAge int    `yaml:"max-age"`
 }
 
 // CertConfig config the certificate files
@@ -118,6 +124,14 @@ func ServerConfigRead(configFile string) (*ServerConfig, error) {
 
   if config.MaxMsgSize == 0 {
     config.MaxMsgSize = 10 * 1024 * 1024
+  }
+
+  if config.Session.Key == "" {
+    config.Session.Key = "90po()PO12wq!@WQ"
+  }
+
+  if config.Session.MaxAge == 0 {
+    config.Session.MaxAge = 3600
   }
 
   return &config, nil

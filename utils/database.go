@@ -8,9 +8,10 @@ import (
 )
 
 type ClipContentInfo struct {
-  ClientID string
-  Username string
-  Content  string
+  ClientID  string
+  Username  string
+  Content   string
+  Timestamp string
 }
 
 type DBInfo struct {
@@ -194,7 +195,7 @@ func (db *DBInfo) GetClipContents() []ClipContentInfo {
     return nil
   }
 
-  rows, err := db.conn.Query("SELECT clientid, username, content FROM contentinfo;")
+  rows, err := db.conn.Query("SELECT clientid, username, content, timestamp FROM contentinfo;")
   if err != nil {
     return nil
   }
@@ -202,7 +203,7 @@ func (db *DBInfo) GetClipContents() []ClipContentInfo {
   var clips []ClipContentInfo
   for rows.Next() {
     clip := ClipContentInfo{}
-    err = rows.Scan(&clip.ClientID, &clip.Username, &clip.Content)
+    err = rows.Scan(&clip.ClientID, &clip.Username, &clip.Content, &clip.Timestamp)
     if err != nil {
       continue
     } else {

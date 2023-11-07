@@ -14,6 +14,7 @@ import (
 
   "github.com/gorilla/mux"
   "github.com/gorilla/websocket"
+  "github.com/michaeljs1990/sqlitestore"
   "github.com/robfig/cron/v3"
   log "github.com/sirupsen/logrus"
 )
@@ -33,11 +34,16 @@ var (
 
   // server config
   GlobalConfig *utils.ServerConfig
+
+  // session store for sqlite
+  SessionStore *sqlitestore.SqliteStore
 )
 
 type DisplayInfo struct {
-  UserName string
-  Content  string
+  ClientID  string
+  Timestamp string
+  UserName  string
+  Content   string
 }
 
 func init() {
@@ -66,11 +72,14 @@ func InitHttpRouter(sockRouter *Router) *mux.Router {
   muxRouter.HandleFunc(GlobalConfig.WebsocketPath, clipHandler.WsHandlerFunc)
 
   // Handle restful
-  muxRouter.HandleFunc("/clipboard/get", clipHandler.RestGetClipHandlerFunc)
-  muxRouter.HandleFunc("/clipboard/set", clipHandler.RestSetClipHandlerFunc)
-  muxRouter.HandleFunc("/login", clipHandler.DoLoginHandlerFunc)
+  restRouter := muxRouter.PathPrefix("/clipboard").Subrouter()
+  restRouter.HandleFunc("/get", clipHandler.RestGetClipHandlerFunc)
+  restRouter.HandleFunc("/set", clipHandler.RestSetClipHandlerFunc)
+  restRouter.Use(UserBasicAuthMDW)
 
   // Handle static resource
+  muxRouter.HandleFunc("/login", clipHandler.DoLoginHandlerFunc).Methods("POST")
+  muxRouter.HandleFunc("/login", clipHandler.LoginHtmlHandlerFunc).Methods("GET")
   muxRouter.PathPrefix("/css").Handler(http.FileServer(http.Dir("../static")))
   muxRouter.HandleFunc("/content", clipHandler.ContentHtmlHandlerFunc)
   muxRouter.HandleFunc("/", clipHandler.LoginHtmlHandlerFunc)
@@ -154,6 +163,14 @@ func main() {
     }
   }
   defer DB.Close()
+
+  // Init Session database
+  SessionStore, err = sqlitestore.NewSqliteStore(
+    path.Join(tmpHomeDir, "session.sqlite3"), "sessions", "/", GlobalConfig.Session.MaxAge, []byte(GlobalConfig.Session.Key))
+  if err != nil {
+    log.Errorln("Failed to init session store.")
+    return
+  }
 
   err = DB.InsertUserInfo(GlobalConfig.Auths)
   if err != nil {

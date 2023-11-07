@@ -14,3 +14,6 @@ certificate:
 log:
   # path: "./server.log"
   log-level: "info"
+session:
+  key: "90po()PO12wq!@WQ"
+  max-age: 3600
