@@ -1,4 +1,5 @@
 *drawio*
 config/*.sqlite3
 config/client2.yaml
+static/*old*
 *.txt

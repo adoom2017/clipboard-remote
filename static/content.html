@@ -17,28 +17,18 @@
     <title>Clipboard Info</title>
   </head>
   <body>
-    <!-- Backgrounds -->
-    <div id="login-bg" class="container-fluid">
-      <div class="bg-color"></div>
-      <div class="bg-color"></div>
-    </div>
-    <!-- End Backgrounds -->
-
     <div class="container" id="content">
-      <div class="row justify-content-center">
-        <div class="col-lg-8" style="white-space:normal; word-break:break-all;overflow:hidden;">
-          <header><h1 class="row justify-content-center">剪贴板内容</h1></header>
-            <section>
-              {{ range . }}
-              <article>
-                <h1>{{ .ClientID }}</h1>
-                <h3>{{ .Timestamp }}</h3>
-                <p>{{ .Content }}</p>
-              </article>
-              {{ end }}
-            </section>
-        </div>
-      </div>
+      <h1>剪贴板内容</h1>
+      <section>
+        {{ range . }}
+        <article>
+          <h2>{{ .ClientID }}</h2>
+          <h3>{{ .Timestamp }}</h3>
+          <p>{{ .Content }}</p>
+        </article>
+        {{ end }}
+      </section>
+      <a class="checkout-button" href="logout">Check Out</a>
     </div>
   </body>
 </html>

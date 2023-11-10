@@ -1,22 +1,22 @@
 package main
 
 import (
-  "clipboard-remote/utils"
-  "context"
-  "flag"
-  "net/http"
-  "os"
-  "os/signal"
-  "path"
-  "path/filepath"
-  "syscall"
-  "time"
+	"clipboard-remote/utils"
+	"context"
+	"flag"
+	"net/http"
+	"os"
+	"os/signal"
+	"path"
+	"path/filepath"
+	"syscall"
+	"time"
 
-  "github.com/gorilla/mux"
-  "github.com/gorilla/websocket"
-  "github.com/michaeljs1990/sqlitestore"
-  "github.com/robfig/cron/v3"
-  log "github.com/sirupsen/logrus"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
+	"github.com/michaeljs1990/sqlitestore"
+	"github.com/robfig/cron/v3"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -80,6 +80,9 @@ func InitHttpRouter(sockRouter *Router) *mux.Router {
   // Handle static resource
   muxRouter.HandleFunc("/login", clipHandler.DoLoginHandlerFunc).Methods("POST")
   muxRouter.HandleFunc("/login", clipHandler.LoginHtmlHandlerFunc).Methods("GET")
+  muxRouter.HandleFunc("/register", clipHandler.DoRegisterHandlerFunc).Methods("POST")
+  muxRouter.HandleFunc("/register", clipHandler.RegisterHtmlHandlerFunc).Methods("GET")
+  muxRouter.HandleFunc("/logout", clipHandler.DoLogoutHandlerFunc)
   muxRouter.PathPrefix("/css").Handler(http.FileServer(http.Dir("../static")))
   muxRouter.HandleFunc("/content", clipHandler.ContentHtmlHandlerFunc)
   muxRouter.HandleFunc("/", clipHandler.LoginHtmlHandlerFunc)

@@ -11,6 +11,15 @@ import (
   log "github.com/sirupsen/logrus"
 )
 
+var htmlTemplate *template.Template
+
+const cookieSessionName string = "session-id"
+const cookieUsername string = "user"
+
+func init() {
+  htmlTemplate = template.Must(template.ParseGlob("../static/*.html"))
+}
+
 type ClipHandler struct {
   router *Router
   //respWriter http.ResponseWriter
@@ -22,8 +31,8 @@ func NewClipHandler(r *Router) *ClipHandler {
 }
 
 func GetSessionUser(r *http.Request) string {
-  session, _ := SessionStore.Get(r, "session-id")
-  s, ok := session.Values["user"]
+  session, _ := SessionStore.Get(r, cookieSessionName)
+  s, ok := session.Values[cookieUsername]
   if !ok {
     return ""
   }
@@ -32,13 +41,19 @@ func GetSessionUser(r *http.Request) string {
 }
 
 func SaveSessionUser(w http.ResponseWriter, r *http.Request, username string) {
-  session, _ := SessionStore.Get(r, "session-id")
+  session, _ := SessionStore.Get(r, cookieSessionName)
 
-  session.Values["user"] = username
+  session.Values[cookieUsername] = username
   session.Options.HttpOnly = true
   session.Options.Secure = true
 
   SessionStore.Save(r, w, session)
+}
+
+func DelSessionUser(w http.ResponseWriter, r *http.Request) {
+  session, _ := SessionStore.Get(r, cookieSessionName)
+
+  SessionStore.Delete(r, w, session)
 }
 
 type RestfulRespInfo struct {
@@ -225,12 +240,7 @@ func (clip *ClipHandler) DoLoginHandlerFunc(w http.ResponseWriter, r *http.Reque
     if pass == "" || pass != passwd {
       log.Errorf("Failed to auth user(%s).", user)
 
-      t, err := template.ParseFiles("../static/login.html")
-      if err != nil {
-        log.Println(err)
-      }
-
-      t.Execute(w, "用户名或者密码错误，请重新登录！")
+      htmlTemplate.ExecuteTemplate(w, "sign_in.html", "用户名或者密码错误，请重新登录！")
       return
     }
 
@@ -248,13 +258,42 @@ func (clip *ClipHandler) LoginHtmlHandlerFunc(w http.ResponseWriter, r *http.Req
     return
   }
 
-  t, err := template.ParseFiles("../static/login.html")
+  htmlTemplate.ExecuteTemplate(w, "sign_in.html", nil)
+}
+
+func (clip *ClipHandler) DoRegisterHandlerFunc(w http.ResponseWriter, r *http.Request) {
+  // register process
+  r.ParseForm()
+
+  user := r.FormValue("username")
+  passwd := r.FormValue("password")
+
+  users := []utils.AuthConfig{
+    {
+      User:     user,
+      Password: passwd,
+    },
+  }
+
+  err := DB.InsertUserInfo(users)
   if err != nil {
-    log.Errorln("Failed to parse template file: ", err)
+    log.Errorln("Failed to add user:", user)
+    htmlTemplate.ExecuteTemplate(w, "sign_up.html", "注册失败，请重新注册！")
     return
   }
 
-  t.Execute(w, nil)
+  htmlTemplate.ExecuteTemplate(w, "sign_in.html", "注册成功，请重新登录！")
+}
+
+func (clip *ClipHandler) DoLogoutHandlerFunc(w http.ResponseWriter, r *http.Request) {
+  DelSessionUser(w, r)
+
+  http.Redirect(w, r, "/login", http.StatusFound)
+}
+
+// RegisterHtmlHandlerFunc handler for register html page
+func (clip *ClipHandler) RegisterHtmlHandlerFunc(w http.ResponseWriter, r *http.Request) {
+  htmlTemplate.ExecuteTemplate(w, "sign_up.html", nil)
 }
 
 // ContentHtmlHandlerFunc handler for content html page
@@ -267,16 +306,15 @@ func (clip *ClipHandler) ContentHtmlHandlerFunc(w http.ResponseWriter, r *http.R
     return
   }
 
-  t, err := template.ParseFiles("../static/content.html")
-  if err != nil {
-    log.Println(err)
-  }
-
   var clipInfos []DisplayInfo
   contents := DB.GetClipContents()
   for _, content := range contents {
     buff, _ := base64.StdEncoding.DecodeString(content.Content)
     clipInfo, _ := utils.DecodeToStruct(buff)
+
+    if content.Username != user {
+      continue
+    }
 
     clipInfos = append(clipInfos, DisplayInfo{
       ClientID:  content.ClientID,
@@ -286,7 +324,8 @@ func (clip *ClipHandler) ContentHtmlHandlerFunc(w http.ResponseWriter, r *http.R
     })
   }
 
-  t.Execute(w, clipInfos)
+  // t.Execute(w, clipInfos)
+  htmlTemplate.ExecuteTemplate(w, "content.html", clipInfos)
 }
 
 // WsHandlerFunc handler for websocket action
