@@ -1,6 +1,7 @@
 package main
 
 import (
+  static "clipboard-remote"
   "clipboard-remote/utils"
   "encoding/base64"
   "encoding/json"
@@ -11,23 +12,27 @@ import (
   log "github.com/sirupsen/logrus"
 )
 
-var htmlTemplate *template.Template
+//var htmlTemplate *template.Template
 
 const cookieSessionName string = "session-id"
 const cookieUsername string = "user"
 
-func init() {
-  htmlTemplate = template.Must(template.ParseGlob("../static/*.html"))
-}
+// func init() {
+//   htmlTemplate = template.Must(template.ParseGlob("../static/*.html"))
+// }
 
 type ClipHandler struct {
   router *Router
   //respWriter http.ResponseWriter
   //req        *http.Request
+  htmlTemplate *template.Template
 }
 
 func NewClipHandler(r *Router) *ClipHandler {
-  return &ClipHandler{router: r}
+  return &ClipHandler{
+    router:       r,
+    htmlTemplate: template.Must(template.ParseFS(static.StaticFiles, "static/*.html")),
+  }
 }
 
 func GetSessionUser(r *http.Request) string {
@@ -240,7 +245,7 @@ func (clip *ClipHandler) DoLoginHandlerFunc(w http.ResponseWriter, r *http.Reque
     if pass == "" || pass != passwd {
       log.Errorf("Failed to auth user(%s).", user)
 
-      htmlTemplate.ExecuteTemplate(w, "sign_in.html", "用户名或者密码错误，请重新登录！")
+      clip.htmlTemplate.ExecuteTemplate(w, "sign_in.html", "用户名或者密码错误，请重新登录！")
       return
     }
 
@@ -258,7 +263,7 @@ func (clip *ClipHandler) LoginHtmlHandlerFunc(w http.ResponseWriter, r *http.Req
     return
   }
 
-  htmlTemplate.ExecuteTemplate(w, "sign_in.html", nil)
+  clip.htmlTemplate.ExecuteTemplate(w, "sign_in.html", nil)
 }
 
 func (clip *ClipHandler) DoRegisterHandlerFunc(w http.ResponseWriter, r *http.Request) {
@@ -278,11 +283,11 @@ func (clip *ClipHandler) DoRegisterHandlerFunc(w http.ResponseWriter, r *http.Re
   err := DB.InsertUserInfo(users)
   if err != nil {
     log.Errorln("Failed to add user:", user)
-    htmlTemplate.ExecuteTemplate(w, "sign_up.html", "注册失败，请重新注册！")
+    clip.htmlTemplate.ExecuteTemplate(w, "sign_up.html", "注册失败，请重新注册！")
     return
   }
 
-  htmlTemplate.ExecuteTemplate(w, "sign_in.html", "注册成功，请重新登录！")
+  clip.htmlTemplate.ExecuteTemplate(w, "sign_in.html", "注册成功，请重新登录！")
 }
 
 func (clip *ClipHandler) DoLogoutHandlerFunc(w http.ResponseWriter, r *http.Request) {
@@ -291,9 +296,14 @@ func (clip *ClipHandler) DoLogoutHandlerFunc(w http.ResponseWriter, r *http.Requ
   http.Redirect(w, r, "/login", http.StatusFound)
 }
 
+func (clip *ClipHandler) DoReflashHandlerFunc(w http.ResponseWriter, r *http.Request) {
+
+  http.Redirect(w, r, "/content", http.StatusFound)
+}
+
 // RegisterHtmlHandlerFunc handler for register html page
 func (clip *ClipHandler) RegisterHtmlHandlerFunc(w http.ResponseWriter, r *http.Request) {
-  htmlTemplate.ExecuteTemplate(w, "sign_up.html", nil)
+  clip.htmlTemplate.ExecuteTemplate(w, "sign_up.html", nil)
 }
 
 // ContentHtmlHandlerFunc handler for content html page
@@ -325,7 +335,7 @@ func (clip *ClipHandler) ContentHtmlHandlerFunc(w http.ResponseWriter, r *http.R
   }
 
   // t.Execute(w, clipInfos)
-  htmlTemplate.ExecuteTemplate(w, "content.html", clipInfos)
+  clip.htmlTemplate.ExecuteTemplate(w, "content.html", clipInfos)
 }
 
 // WsHandlerFunc handler for websocket action
