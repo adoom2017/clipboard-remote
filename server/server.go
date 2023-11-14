@@ -16,6 +16,7 @@ import (
 
   "github.com/gorilla/mux"
   "github.com/gorilla/websocket"
+  "github.com/grandcat/zeroconf"
   "github.com/michaeljs1990/sqlitestore"
   "github.com/robfig/cron/v3"
   log "github.com/sirupsen/logrus"
@@ -85,7 +86,7 @@ func InitHttpRouter(sockRouter *Router) *mux.Router {
   muxRouter.HandleFunc("/register", clipHandler.DoRegisterHandlerFunc).Methods("POST")
   muxRouter.HandleFunc("/register", clipHandler.RegisterHtmlHandlerFunc).Methods("GET")
   muxRouter.HandleFunc("/logout", clipHandler.DoLogoutHandlerFunc)
-  muxRouter.HandleFunc("/reflash", clipHandler.DoReflashHandlerFunc)
+  muxRouter.HandleFunc("/reflesh", clipHandler.DoReflashHandlerFunc)
 
   staticFs, _ := fs.Sub(static.StaticFiles, "static")
   muxRouter.PathPrefix("/css").Handler(http.FileServer(http.FS(staticFs)))
@@ -198,6 +199,13 @@ func main() {
     }
   })
   c.Start()
+  // Register auto find
+  autoFind, err := zeroconf.Register("clipboard", "_cliphttp._tcp", "local.", 443, []string{"txtv=0", "lo=1", "la=2"}, nil)
+  if err != nil {
+    log.Errorln("Failed to register auto find info:", err)
+    return
+  }
+  defer autoFind.Shutdown()
 
   // Create a new router
   router := NewRouter()

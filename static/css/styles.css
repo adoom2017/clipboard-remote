@@ -158,11 +158,11 @@ article {
   color: white;
 }
 
-.reflash-button {
+.reflesh-button {
   background-color: white;
   color: black;
   border: 2px solid #555555;
-  padding: 16px 32px;
+  padding: 16px 40px;
   text-align: center;
   text-decoration: none;
   display: inline-flex;
@@ -174,7 +174,7 @@ article {
   border-radius: 0.5rem;
 }
 
-.reflash-button:hover {
+.reflesh-button:hover {
   background-color: #555555;
   color: white;
 }

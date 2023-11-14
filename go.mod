@@ -26,4 +26,9 @@ require (
 	github.com/michaeljs1990/sqlitestore v0.0.0-20210507162135-8585425bc864
 )
 
-require golang.org/x/net v0.17.0 // indirect
+require (
+	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
+	github.com/grandcat/zeroconf v1.0.0 // indirect
+	github.com/miekg/dns v1.1.27 // indirect
+	golang.org/x/net v0.17.0 // indirect
+)

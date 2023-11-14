@@ -11,6 +11,7 @@ import (
   "clipboard-remote/clipboard"
   "clipboard-remote/utils"
 
+  "github.com/grandcat/zeroconf"
   log "github.com/sirupsen/logrus"
 )
 
@@ -93,6 +94,34 @@ func main() {
 
   // watch context, used for watch break
   ctx, cancel := context.WithCancel(context.Background())
+
+  // auto find the server
+  resolver, err := zeroconf.NewResolver(nil)
+  if err != nil {
+    log.Errorln("Failed to initialize resolver:", err)
+    return
+  }
+
+  entries := make(chan *zeroconf.ServiceEntry)
+  err = resolver.Browse(ctx, "_cliphttp._tcp", "local.", entries)
+  if err != nil {
+    log.Errorln("Failed to browse:", err)
+    return
+  }
+
+  if clientConfig.Host == "" {
+    select {
+    case <-interrupt:
+      cancel()
+      log.Infoln("No server found, waiting client to exist...")
+      time.Sleep(1 * time.Second)
+      return
+    case serverResult := <-entries:
+      log.Println(serverResult)
+      clientConfig.Host = serverResult.AddrIPv4[0].String()
+      clientConfig.Port = serverResult.Port
+    }
+  }
 
   // handle io local to server
   client := NewClient(clientConfig)
