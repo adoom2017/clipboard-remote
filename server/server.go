@@ -143,7 +143,7 @@ func main() {
 
   // Set the log file
   if GlobalConfig.Log.LogPath != "" {
-    logfile, err := os.OpenFile(GlobalConfig.Log.LogPath, os.O_RDONLY|os.O_CREATE, 0666)
+    logfile, err := os.OpenFile(GlobalConfig.Log.LogPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
     if err != nil {
       log.Errorf("Failed to open log file(%s), err: %v.", GlobalConfig.Log.LogPath, err)
       // print the log info to stdout
