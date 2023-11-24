@@ -1,0 +1,64 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Build
+
+on:
+  push:
+    paths-ignore:
+        - "architecture.png"
+        - ".gitignore"
+        - "README.md"
+        - "config/**"
+        - ".github/**"
+    branches: [ "master" ]
+    tags: 
+        - "v*"
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    permissions: write-all
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+  
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          check-latest: true
+          
+      - name: Build Windows Client
+        run: CGO_ENABLED=1 GOARCH=amd64 GOOS=windows go build -o bin/clip-client.exe ./win-client
+  
+      - name: Build Windows Server
+        run: CGO_ENABLED=1 GOARCH=amd64 GOOS=windows go build -o bin/clip-server.exe ./server
+
+      - name: Build Linux Server
+        run: CGO_ENABLED=1 GOARCH=amd64 GOOS=linux go build -o bin/clip-server ./server
+
+  Upload-Release:
+    permissions: write-all
+    if: ${{ github.ref_type=='tag' }}
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: bin/
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: bin
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        if: ${{  success() }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: bin/*
+          generate_release_notes: true
