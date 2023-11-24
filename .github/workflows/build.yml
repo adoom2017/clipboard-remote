@@ -56,11 +56,16 @@ jobs:
         env:
           CGO_ENABLED: 1
 
+      - uses: actions/upload-artifact@v3
+        if: ${{  success() }}
+        with:
+          name: artifact
+          path: bin/
   Upload-Release:
     permissions: write-all
     if: ${{ github.ref_type=='tag' }}
     needs: [build]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v3
         with:
