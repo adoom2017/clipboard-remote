@@ -32,10 +32,10 @@ jobs:
           check-latest: true
           
       - name: Build Windows Client
-        run: CGO_ENABLED=1 GOARCH=amd64 GOOS=windows go build -o bin/clip-client.exe ./win-client
+        run: CGO_ENABLED=1 GOARCH=amd64 GOOS=windows CC=x86_64-w64-mingw32-gcc go build -o bin/clip-client.exe ./win-client
   
       - name: Build Windows Server
-        run: CGO_ENABLED=1 GOARCH=amd64 GOOS=windows go build -o bin/clip-server.exe ./server
+        run: CGO_ENABLED=1 GOARCH=amd64 GOOS=windows CC=x86_64-w64-mingw32-gcc go build -o bin/clip-server.exe ./server
 
       - name: Build Linux Server
         run: CGO_ENABLED=1 GOARCH=amd64 GOOS=linux go build -o bin/clip-server ./server
