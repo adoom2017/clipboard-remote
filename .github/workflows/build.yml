@@ -20,8 +20,16 @@ on:
 jobs:
   build:
     permissions: write-all
-    runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        build: [windows, linux]
+        include:
+          - build: windows
+            os: windows-latest
+          - build: linux
+            os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    
     steps:
       - uses: actions/checkout@v3
   
@@ -31,20 +39,28 @@ jobs:
           go-version: '1.20'
           check-latest: true
           
-      - name: Build Windows Client
-        run: CGO_ENABLED=1 GOARCH=amd64 GOOS=windows CC=x86_64-w64-mingw32-gcc go build -o bin/clip-client.exe ./win-client
-  
-      - name: Build Windows Server
-        run: CGO_ENABLED=1 GOARCH=amd64 GOOS=windows CC=x86_64-w64-mingw32-gcc go build -o bin/clip-server.exe ./server
+      - name: Download dependencies
+        run: go mod download
 
-      - name: Build Linux Server
-        run: CGO_ENABLED=1 GOARCH=amd64 GOOS=linux go build -o bin/clip-server ./server
+      - name: Build Binary Windows
+        if: ${{ matrix.build=='windows' }}
+        run: |
+          go build -o bin/clip-client.exe ./win-client
+          go build -o bin/clip-server.exe ./server
+        env:
+          CGO_ENABLED: 1
+          
+      - name: Build Linux Windows
+        if: ${{ matrix.build=='linux' }}
+        run: go build -o bin/clip-server ./server
+        env:
+          CGO_ENABLED: 1
 
   Upload-Release:
     permissions: write-all
     if: ${{ github.ref_type=='tag' }}
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/download-artifact@v3
         with:
