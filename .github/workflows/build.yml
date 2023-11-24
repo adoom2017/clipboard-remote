@@ -45,14 +45,14 @@ jobs:
       - name: Build Binary Windows
         if: ${{ matrix.build=='windows' }}
         run: |
-          go build -o bin/clip-client.exe ./win-client
-          go build -o bin/clip-server.exe ./server
+          go build -o bin/clip-client-windows-amd64.exe ./win-client
+          go build -o bin/clip-server-windows-amd64.exe ./server
         env:
           CGO_ENABLED: 1
           
-      - name: Build Linux Windows
+      - name: Build Binary Linux
         if: ${{ matrix.build=='linux' }}
-        run: go build -o bin/clip-server ./server
+        run: go build -o bin/clip-server-linux-amd64 ./server
         env:
           CGO_ENABLED: 1
 
